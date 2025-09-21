@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@tanstack/react-query": "^5.89.0",
+    "@thirdweb-dev/wallets": "^2.5.39",
+    "thirdweb": "^5.107.0",
+    "viem": "^2.37.7"
+  }
+}
