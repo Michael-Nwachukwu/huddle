@@ -5,9 +5,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./WorkspaceNft.sol";
+import "./HuddleLib.sol";
 
-contract TaskSphere is ReentrancyGuard {
+contract Huddle is ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using HuddleLib for *;
 
     enum ProposalState {
         Executed,
@@ -21,13 +23,20 @@ contract TaskSphere is ReentrancyGuard {
         Abstain
     }
 
-    enum TaskState {
-        active,
-        completed,
-        archived
+    enum TaskPriority {
+        High,
+        Medium,
+        Low
     }
 
-    // Custom errors for gas optimization
+    enum TaskState {
+        active, // also equals pending in client
+        completed,
+        archived,
+        inProgress,
+        assigneeDone
+    }
+
     error NoAssignees();
     error NoMatchingWorkspace();
     error UserNotAssignedToTask();
@@ -36,11 +45,9 @@ contract TaskSphere is ReentrancyGuard {
     error InsufficientFundsInWorkspace();
     error TaskUnrewarded();
     error UserAlreadyClaimedReward();
-    error ZeroAddressDetected();
     error NoMatchingProposal();
     error ProposalNotActive();
     error ProposalExpired();
-    error FieldCannotBeEmpty();
     error NotMemberOfWorkspace();
     error TokenNotAccepted();
     error InvalidReward();
@@ -88,17 +95,29 @@ contract TaskSphere is ReentrancyGuard {
         uint256 abstain;
     }
 
+    struct WorkspaceMember {
+        address member;
+        string role;
+    }
+
     struct Workspace {
         uint256 id;
         address owner;
         uint256 nativeBalance;
-        uint256 taskCounter;
-       
-        uint256 proposalCounter;
         uint256 ercRewardAmountSum;
         uint256 nativeRewardAmountSum;
-        
-        address[] members;
+        // Pack these uint64s into fewer storage slots
+        uint64 taskCounter;
+        uint64 totalActiveTasks;
+        uint64 completedTaskCounter;
+        uint64 inProgressTaskCounter;
+        uint64 overdueTaskCounter;
+        uint64 proposalCounter;
+        // Add padding if needed: uint32 padding1; uint32 padding2;
+
+        string workspaceName;
+        string topicId;
+        WorkspaceMember[] members;
         WorkspaceNft token;
         mapping(address => uint256) tokenBalance;
     }
@@ -112,6 +131,12 @@ contract TaskSphere is ReentrancyGuard {
         uint256 reward; // This now stores the net reward after fee deduction
         uint256 grossReward; // Original reward amount before fee
         address token;
+        string title;
+        string description;
+        uint256 startTime;
+        uint256 dueDate;
+        string topicId;
+        string fileId;
         address[] assignees;
         mapping(address => bool) isUserAssignedToTask;
         mapping(address => bool) hasAssigneeClaimedReward;
@@ -128,9 +153,30 @@ contract TaskSphere is ReentrancyGuard {
         string name;
     }
 
+    struct UserStats {
+        uint16 totalTasksCounter;
+        uint16 completedTaskCounter;
+        uint16 inProgressTaskCounter;
+        uint16 overdueTaskCounter;
+        uint16 pendingTaskCounter;
+        uint8 proposalCreatedCounter;
+        uint8 proposalVotedCounter;
+        uint256 ercRewardAmountSum;
+        uint256 nativeRewardAmountSum;
+        WorkspaceContextData[] workspaces;
+    }
+
+    struct LeaderBoardEntry {
+        address user;
+        uint64 tasksCompleted;
+        uint256 hbarEarned;
+        uint256 erc20Earned;
+        uint256 proposalsVoted;
+    }
+
     // Storage variables
     mapping(uint256 => Workspace) public workspaces;
-    mapping(uint256 => WorkspaceContextData) public userWorkspaces;
+    mapping(address => UserStats) public userRecords;
     mapping(address => bool) public isTokenAccepted;
 
     // Efficient access mappings
@@ -139,13 +185,6 @@ contract TaskSphere is ReentrancyGuard {
 
     // Platform fee storage
     mapping(address => uint256) public platformFees; // ERC20 token fees
-
-    mapping(address => uint256) public userProposalsCreated;
-    mapping(address => uint256) public userProposalVotes;
-
-    mapping(address => mapping(address => uint256))
-        public userTokenAmountEarned;
-    mapping(address => uint256) public userNativeTokenEarned;
 
     mapping(address => Transaction[]) public userTransactions;
 
@@ -216,16 +255,15 @@ contract TaskSphere is ReentrancyGuard {
     );
 
     /**
-     * @notice Constructor for TaskSphere contract
+     * @notice Constructor for Huddle contract
      * @param _usdtTokenAddress Address of the USDT token to accept
      */
-    constructor (address _usdtTokenAddress) {
-        if (_usdtTokenAddress == address(0)) revert ZeroAddressDetected();
+    constructor(address _usdtTokenAddress) {
+        HuddleLib.validateAddress(_usdtTokenAddress);
         isTokenAccepted[_usdtTokenAddress] = true;
         acceptedTokens.push(_usdtTokenAddress);
         owner = msg.sender;
-        platformFeePercent = 250; // 2.5% represented as 250 basis points (out of 10000)
-        workspaceCounter = 0;
+        platformFeePercent = 250;
     }
 
     /**
@@ -253,6 +291,11 @@ contract TaskSphere is ReentrancyGuard {
         _;
     }
 
+    modifier OnlyvalidWorkspace(uint256 workspaceId) {
+        if (workspaces[workspaceId].id == 0) revert NoMatchingWorkspace();
+        _;
+    }
+
     /**
      * @notice Creates a new workspace
      * @param _name Name of the workspace NFT
@@ -261,10 +304,12 @@ contract TaskSphere is ReentrancyGuard {
      */
     function createWorkspace(
         string calldata _name,
-        string calldata _symbol
+        string calldata _symbol,
+        string calldata _topicId
     ) external returns (uint256 workspaceId) {
-        if (msg.sender == address(0)) revert ZeroAddressDetected();
-        if (bytes(_name).length == 0 || bytes(_symbol).length == 0) revert FieldCannotBeEmpty();
+        HuddleLib.validateAddress(msg.sender);
+        HuddleLib.validateString(_name);
+        HuddleLib.validateString(_symbol);
 
         workspaceId = workspaceCounter + 1;
 
@@ -279,17 +324,17 @@ contract TaskSphere is ReentrancyGuard {
         workspace.id = workspaceId;
         workspace.owner = msg.sender;
         workspace.token = workspaceToken;
+        workspace.workspaceName = _name;
+        workspace.topicId = _topicId;
 
         workspaceCounter++;
 
         // Add creator as the first member
-        uint256 tokenId = workspaceToken.safeMint(msg.sender);
-        workspace.members.push(msg.sender);
+        joinWorkspace(workspace.id);
 
         _addTransaction(0, "Create workspace");
 
         emit WorkspaceCreated(workspaceId, msg.sender, _name, _symbol);
-        emit WorkspaceMemberAdded(workspaceId, msg.sender, tokenId);
 
         return workspaceId;
     }
@@ -304,6 +349,38 @@ contract TaskSphere is ReentrancyGuard {
         );
     }
 
+    function _updateUserTaskCounters(
+        address user,
+        TaskState oldState,
+        TaskState newState,
+        bool isRemoval,
+        bool isNewTask
+    ) internal {
+        UserStats storage stats = userRecords[user];
+
+        if (isNewTask && !isRemoval) stats.totalTasksCounter += 1;
+
+        if (oldState == TaskState.active && stats.pendingTaskCounter > 0) {
+            stats.pendingTaskCounter -= 1;
+        } else if (
+            oldState == TaskState.inProgress && stats.inProgressTaskCounter > 0
+        ) {
+            stats.inProgressTaskCounter -= 1;
+        }
+
+        if (!isRemoval) {
+            if (newState == TaskState.active) {
+                stats.pendingTaskCounter += 1;
+            } else if (newState == TaskState.inProgress) {
+                stats.inProgressTaskCounter += 1;
+            } else if (newState == TaskState.completed) {
+                stats.completedTaskCounter += 1;
+            }
+        } else if (stats.totalTasksCounter > 0) {
+            stats.totalTasksCounter -= 1;
+        }
+    }
+
     /**
      * @notice Allows a user to join a workspace
      * @param _workspaceId ID of the workspace to join
@@ -311,31 +388,28 @@ contract TaskSphere is ReentrancyGuard {
      */
     function joinWorkspace(
         uint256 _workspaceId
-    ) external returns (uint256 tokenId) {
+    ) public OnlyvalidWorkspace(_workspaceId) returns (uint256 tokenId) {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
-        if (msg.sender == address(0)) revert ZeroAddressDetected();
+        HuddleLib.validateAddress(msg.sender);
 
         // Mint membership NFT to the new member
         tokenId = workspace.token.safeMint(msg.sender);
-        workspace.members.push(msg.sender);
+        WorkspaceMember memory newMember = WorkspaceMember({
+            member: msg.sender,
+            role: "owner"
+        });
+
+        workspace.members.push(newMember);
+
+        WorkspaceContextData memory newWorkspace = WorkspaceContextData({
+            workspaceId: workspace.id,
+            name: workspace.workspaceName
+        });
+
+        userRecords[msg.sender].workspaces.push(newWorkspace);
 
         emit WorkspaceMemberAdded(_workspaceId, msg.sender, tokenId);
         return tokenId;
-    }
-
-    /**
-     * @notice Calculates platform fee and net reward amount
-     * @param _grossReward The original reward amount
-     * @return netReward The reward amount after fee deduction
-     * @return platformFee The platform fee amount
-     */
-    function _calculateFeeAndNetReward(
-        uint256 _grossReward
-    ) internal view returns (uint256 netReward, uint256 platformFee) {
-        platformFee = (_grossReward * platformFeePercent) / 10000;
-        netReward = _grossReward - platformFee;
-        return (netReward, platformFee);
     }
 
     /**
@@ -354,15 +428,26 @@ contract TaskSphere is ReentrancyGuard {
         bool _isRewarded,
         bool _isPaymentNative,
         uint256 _grossReward,
-        address _token
+        address _token,
+        string calldata _title,
+        string calldata _description,
+        uint256 _startTime,
+        uint256 _dueDate,
+        string calldata _topicId,
+        string calldata _fileId
     )
         external
         payable
         onlyWorkspaceOwner(_workspaceId)
-        returns (uint256 taskId)
+        returns (uint64 taskId)
     {
         Workspace storage workspace = workspaces[_workspaceId];
         if (_assignees.length == 0) revert NoAssignees();
+
+        require(
+            _startTime < _dueDate,
+            "Start Time must be less than due date."
+        );
 
         uint256 netReward = _grossReward;
         uint256 platformFee = 0;
@@ -371,8 +456,10 @@ contract TaskSphere is ReentrancyGuard {
         if (_isRewarded) {
             if (_grossReward == 0) revert InvalidReward();
 
-            // Calculate platform fee and net reward
-            (netReward, platformFee) = _calculateFeeAndNetReward(_grossReward);
+            (platformFee, netReward) = HuddleLib.calculateFee(
+                _grossReward,
+                platformFeePercent
+            );
 
             if (_isPaymentNative) {
                 if (msg.value != _grossReward) revert InsufficientFunds();
@@ -380,7 +467,7 @@ contract TaskSphere is ReentrancyGuard {
                 ethPlatformFee += platformFee;
             } else {
                 if (!isTokenAccepted[_token]) revert TokenNotAccepted();
-                if (_token == address(0)) revert ZeroAddressDetected();
+                HuddleLib.validateAddress(_token);
                 if (msg.value > 0) revert InvalidReward();
 
                 // Check token approval and balance
@@ -413,6 +500,14 @@ contract TaskSphere is ReentrancyGuard {
         task.grossReward = _grossReward; // Store original reward amount
         task.token = _token;
         task.assignees = _assignees;
+        task.title = _title;
+        task.description = _description;
+        task.topicId = _topicId;
+        task.fileId = _fileId;
+        task.startTime = _startTime;
+        task.dueDate = _dueDate;
+
+        workspace.totalActiveTasks += 1;
 
         // Update workspace balance with net reward (after fee deduction)
         if (_isRewarded) {
@@ -433,9 +528,16 @@ contract TaskSphere is ReentrancyGuard {
         // Mark assignees
         for (uint256 i = 0; i < _assignees.length; i++) {
             address assignee = _assignees[i];
-            if (assignee == address(0)) revert ZeroAddressDetected();
+            HuddleLib.validateAddress(assignee);
             task.isUserAssignedToTask[assignee] = true;
             task.hasAssigneeClaimedReward[assignee] = false;
+            _updateUserTaskCounters(
+                assignee,
+                TaskState.active,
+                TaskState.active,
+                false,
+                true
+            );
         }
 
         workspace.taskCounter = taskId;
@@ -457,19 +559,17 @@ contract TaskSphere is ReentrancyGuard {
         address _user,
         uint256 _workspaceId,
         uint256 _taskId
-    ) public onlyWorkspaceOwner(_workspaceId) {
+    ) public onlyWorkspaceOwner(_workspaceId) OnlyvalidWorkspace(_workspaceId) {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
-
         Task storage task = tasks[workspace.id][_taskId];
+
         if (task.workspaceId != _workspaceId) revert NoMatchingWorkspace();
         if (task.taskState == TaskState.completed)
             revert TaskAlreadyCompleted();
-
         if (!task.isUserAssignedToTask[_user]) revert UserNotAssignedToTask();
-
         if (task.taskState != TaskState.active) revert TaskNotActive();
 
+        // Remove from assignees array
         for (uint i = 0; i < task.assignees.length; i++) {
             if (task.assignees[i] == _user) {
                 task.assignees[i] = task.assignees[task.assignees.length - 1];
@@ -479,6 +579,23 @@ contract TaskSphere is ReentrancyGuard {
             }
         }
 
+        // Update user counters with underflow protection
+        UserStats storage userStats = userRecords[_user];
+        if (userStats.totalTasksCounter > 0) {
+            userStats.totalTasksCounter -= 1;
+        }
+        if (
+            task.taskState == TaskState.active &&
+            userStats.pendingTaskCounter > 0
+        ) {
+            userStats.pendingTaskCounter -= 1;
+        } else if (
+            task.taskState == TaskState.inProgress &&
+            userStats.inProgressTaskCounter > 0
+        ) {
+            userStats.inProgressTaskCounter -= 1;
+        }
+
         emit TaskUnassigned(_user, _taskId, _workspaceId);
     }
 
@@ -486,9 +603,8 @@ contract TaskSphere is ReentrancyGuard {
         address _user,
         uint256 _workspaceId,
         uint256 _taskId
-    ) public onlyWorkspaceOwner(_workspaceId) {
+    ) public onlyWorkspaceOwner(_workspaceId) OnlyvalidWorkspace(_workspaceId) {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
 
         Task storage task = tasks[workspace.id][_taskId];
         if (task.workspaceId != _workspaceId) revert NoMatchingWorkspace();
@@ -501,6 +617,15 @@ contract TaskSphere is ReentrancyGuard {
         if (task.taskState != TaskState.active) revert TaskNotActive();
 
         task.assignees.push(_user);
+        task.isUserAssignedToTask[_user] = true;
+
+        _updateUserTaskCounters(
+            _user,
+            TaskState.active,
+            task.taskState,
+            false,
+            true
+        );
 
         emit TaskAssigned(_user, _taskId, _workspaceId);
     }
@@ -515,37 +640,171 @@ contract TaskSphere is ReentrancyGuard {
         addTaskAssignee(_newUser, _workspaceId, _taskId);
     }
 
-    function markTaskClaimable(
+    function markAs(
         uint256 _workspaceId,
-        uint256 _taskId
-    ) external onlyWorkspaceOwner(_workspaceId) {
+        uint256 _taskId,
+        TaskState stateUpdate
+    )
+        external
+        onlyWorkspaceMember(_workspaceId)
+        OnlyvalidWorkspace(_workspaceId)
+    {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
-
         Task storage task = tasks[workspace.id][_taskId];
+
         if (task.workspaceId != _workspaceId) revert NoMatchingWorkspace();
+        if (task.taskState == TaskState.archived) revert TaskNotActive();
 
-        if (task.taskState != TaskState.active) revert TaskNotActive();
+        TaskState oldState = task.taskState;
 
-        task.taskState = TaskState.completed;
+        // Only owner can mark as completed
+        if (
+            stateUpdate == TaskState.completed && msg.sender != workspace.owner
+        ) {
+            revert NotWorkspaceOwner();
+        }
+
+        // Update task state
+        task.taskState = stateUpdate;
+
+        if (stateUpdate == TaskState.completed) {
+            // Update workspace counters with underflow protection
+            workspace.completedTaskCounter += 1;
+            if (
+                oldState == TaskState.inProgress &&
+                workspace.inProgressTaskCounter > 0
+            ) {
+                workspace.inProgressTaskCounter -= 1;
+            }
+
+            // Update all assignees when completed
+            for (uint i = 0; i < task.assignees.length; i++) {
+                _updateUserTaskCounters(
+                    task.assignees[i],
+                    oldState,
+                    stateUpdate,
+                    false,
+                    false
+                );
+            }
+        } else if (stateUpdate == TaskState.inProgress) {
+            // Only update the user who marked it in progress
+            _updateUserTaskCounters(
+                msg.sender,
+                oldState,
+                stateUpdate,
+                false,
+                false
+            );
+            workspace.inProgressTaskCounter += 1;
+        } else {
+            // Handle other state changes (like back to active)
+            if (msg.sender == workspace.owner) {
+                // Owner can change any assignee's state
+                for (uint i = 0; i < task.assignees.length; i++) {
+                    _updateUserTaskCounters(
+                        task.assignees[i],
+                        oldState,
+                        stateUpdate,
+                        false,
+                        false
+                    );
+                }
+            } else {
+                // Regular member can only change their own state
+                if (task.isUserAssignedToTask[msg.sender]) {
+                    _updateUserTaskCounters(
+                        msg.sender,
+                        oldState,
+                        stateUpdate,
+                        false,
+                        false
+                    );
+                } else {
+                    revert UserNotAssignedToTask();
+                }
+            }
+
+            // Update workspace counters with underflow protection
+            if (
+                oldState == TaskState.inProgress &&
+                workspace.inProgressTaskCounter > 0
+            ) {
+                workspace.inProgressTaskCounter -= 1;
+            }
+            if (stateUpdate == TaskState.inProgress) {
+                workspace.inProgressTaskCounter += 1;
+            }
+        }
 
         emit TaskStateUpdated(_taskId, _workspaceId);
+    }
+
+    function _removeUserFromTask(
+        address user,
+        TaskState currentState
+    ) internal {
+        UserStats storage stats = userRecords[user];
+
+        // Decrement total tasks
+        if (stats.totalTasksCounter > 0) {
+            stats.totalTasksCounter -= 1;
+        }
+
+        // Decrement current state counter
+        if (currentState == TaskState.active && stats.pendingTaskCounter > 0) {
+            stats.pendingTaskCounter -= 1;
+        } else if (
+            currentState == TaskState.inProgress &&
+            stats.inProgressTaskCounter > 0
+        ) {
+            stats.inProgressTaskCounter -= 1;
+        }
     }
 
     function removeTask(
         uint256 _workspaceId,
         uint256 _taskId
-    ) external onlyWorkspaceOwner(_workspaceId) {
+    )
+        external
+        onlyWorkspaceOwner(_workspaceId)
+        OnlyvalidWorkspace(_workspaceId)
+    {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
-
         Task storage task = tasks[workspace.id][_taskId];
+
         if (task.workspaceId != workspace.id) revert NoMatchingWorkspace();
 
+        TaskState currentState = task.taskState;
+        uint256 assigneeCount = task.assignees.length;
+
+        // Update user stats for each assignee with underflow protection
+        for (uint i = 0; i < assigneeCount; i++) {
+            address assignee = task.assignees[i];
+            _updateUserTaskCounters(
+                assignee,
+                currentState,
+                TaskState.active,
+                true,
+                false
+            );
+        }
+
+        // Update workspace counters with underflow protection (once per task, not per assignee)
+        if (
+            currentState == TaskState.inProgress &&
+            workspace.inProgressTaskCounter > 0
+        ) {
+            workspace.inProgressTaskCounter -= 1;
+        }
+        if (workspace.totalActiveTasks > 0) {
+            workspace.totalActiveTasks -= 1;
+        }
+
         if (task.isRewarded) {
-            if (task.taskState == TaskState.completed) {
-                // Check if all rewards are claimed
-                for (uint i = 0; i < task.assignees.length; i++) {
+            if (currentState == TaskState.completed) {
+                // Check if all rewards are claimed before allowing removal
+                for (uint i = 0; i < assigneeCount; i++) {
                     if (!task.hasAssigneeClaimedReward[task.assignees[i]]) {
                         revert TaskRewardsUnclaimed();
                     }
@@ -556,9 +815,7 @@ contract TaskSphere is ReentrancyGuard {
         }
 
         task.taskState = TaskState.archived;
-
         _addTransaction(task.reward, "Task removal");
-
         emit TaskRemoved(_taskId, _workspaceId);
     }
 
@@ -570,11 +827,15 @@ contract TaskSphere is ReentrancyGuard {
     function claim(
         uint256 _workspaceId,
         uint256 _taskId
-    ) external nonReentrant onlyWorkspaceMember(_workspaceId) {
-        if (msg.sender == address(0)) revert ZeroAddressDetected();
+    )
+        external
+        nonReentrant
+        onlyWorkspaceMember(_workspaceId)
+        OnlyvalidWorkspace(_workspaceId)
+    {
+        HuddleLib.validateAddress(msg.sender);
 
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
 
         Task storage task = tasks[workspace.id][_taskId];
         if (task.workspaceId != _workspaceId) revert NoMatchingWorkspace();
@@ -598,42 +859,77 @@ contract TaskSphere is ReentrancyGuard {
                 revert InsufficientFundsInWorkspace();
         }
 
-        // Mark as claimed
+        // CHECKS-EFFECTS-INTERACTIONS PATTERN: All state changes BEFORE external calls
+
+        // Mark as claimed first
         task.hasAssigneeClaimedReward[msg.sender] = true;
 
-        // Update balances
+        // Update workspace balances
         if (task.isPaymentNative) {
             workspace.nativeBalance -= claimAmount;
+            userRecords[msg.sender].nativeRewardAmountSum += claimAmount;
         } else {
             workspace.tokenBalance[task.token] -= claimAmount;
+            userRecords[msg.sender].ercRewardAmountSum += claimAmount;
         }
 
-        // Transfer reward
+        // Add transaction record
+        _addTransaction(claimAmount, "Task reward");
+
+        // EXTERNAL INTERACTIONS LAST
         if (task.isPaymentNative) {
             (bool success, ) = msg.sender.call{value: claimAmount}("");
-            if (!success) revert TransferFailed();
-            userNativeTokenEarned[msg.sender] += claimAmount;
+            if (!success) {
+                // Revert all state changes if transfer fails
+                revert TransferFailed();
+            }
         } else {
             IERC20(task.token).safeTransfer(msg.sender, claimAmount);
-            userTokenAmountEarned[msg.sender][task.token] += claimAmount;
         }
-
-        _addTransaction(claimAmount, "Task reward");
 
         emit TaskRewardClaimed(_taskId, _workspaceId, msg.sender, claimAmount);
     }
 
-    function hasUserClaimedReward(uint256 _workspaceId, uint256 _taskId, address _user) external view returns (bool claimed) {
+    function hasUserClaimedReward(
+        uint256 _workspaceId,
+        uint256 _taskId,
+        address _user
+    ) external view returns (bool claimed) {
         Workspace storage workspace = workspaces[_workspaceId];
         Task storage task = tasks[workspace.id][_taskId];
         return task.hasAssigneeClaimedReward[_user];
     }
 
-    function getUsersTokenEarnedAmount(
-        address _user,
-        address _token
-    ) external view returns (uint256 amount) {
-        return userTokenAmountEarned[_user][_token];
+    function getUserWorkspaces(
+        address _user
+    ) external view returns (WorkspaceContextData[] memory) {
+        return userRecords[_user].workspaces;
+    }
+
+    function getWorkspaceLeaderBoard(
+        uint256 _workspaceId
+    ) external view returns (LeaderBoardEntry[] memory) {
+        Workspace storage workspace = workspaces[_workspaceId];
+        uint256 resultSize = HuddleLib.min(workspace.members.length, 5);
+
+        LeaderBoardEntry[] memory topMembers = new LeaderBoardEntry[](
+            resultSize
+        );
+
+        for (uint256 i = 0; i < resultSize; i++) {
+            address memberAddress = workspace.members[i].member;
+            UserStats memory stats = userRecords[memberAddress];
+
+            topMembers[i] = LeaderBoardEntry(
+                memberAddress,
+                stats.completedTaskCounter,
+                stats.nativeRewardAmountSum,
+                stats.ercRewardAmountSum,
+                stats.proposalVotedCounter
+            );
+        }
+
+        return topMembers;
     }
 
     /**
@@ -647,10 +943,10 @@ contract TaskSphere is ReentrancyGuard {
         uint256 _workspaceId,
         string calldata _title,
         string calldata _description
-    ) external onlyWorkspaceMember(_workspaceId) returns (uint256 proposalId) {
-        if (msg.sender == address(0)) revert ZeroAddressDetected();
-        if (bytes(_title).length == 0) revert FieldCannotBeEmpty();
-        if (bytes(_description).length == 0) revert FieldCannotBeEmpty();
+    ) external onlyWorkspaceMember(_workspaceId) returns (uint64 proposalId) {
+        HuddleLib.validateAddress(msg.sender);
+        HuddleLib.validateString(_title);
+        HuddleLib.validateString(_description);
 
         Workspace storage workspace = workspaces[_workspaceId];
         proposalId = workspace.proposalCounter + 1;
@@ -668,7 +964,7 @@ contract TaskSphere is ReentrancyGuard {
 
         workspace.proposalCounter = proposalId;
 
-        userProposalsCreated[msg.sender] += 1;
+        userRecords[msg.sender].proposalCreatedCounter += 1;
 
         _addTransaction(0, "Proposal creation");
 
@@ -682,45 +978,44 @@ contract TaskSphere is ReentrancyGuard {
         return proposalId;
     }
 
-    // Add this function to the contract
     function getProposals(
         uint256 _workspaceId,
         uint256 _stateFilter
-    ) external view returns (ProposalView[] memory) {
+    )
+        external
+        view
+        OnlyvalidWorkspace(_workspaceId)
+        returns (ProposalView[] memory)
+    {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
-
-        // Count matching proposals
         uint256 count = 0;
+
         for (uint256 i = 1; i <= workspace.proposalCounter; i++) {
             if (
                 _stateFilter == 3 ||
                 uint256(proposals[_workspaceId][i].state) == _stateFilter
-            ) {
-                count++;
-            }
+            ) count++;
         }
 
-        // Populate result array
         ProposalView[] memory result = new ProposalView[](count);
         uint256 index = 0;
+
         for (uint256 i = 1; i <= workspace.proposalCounter; i++) {
-            Proposal storage proposal = proposals[_workspaceId][i];
-            if (_stateFilter == 3 || uint256(proposal.state) == _stateFilter) {
-                result[index] = ProposalView({
-                    id: proposal.id,
-                    workspaceId: proposal.workspaceId,
-                    publisher: proposal.publisher,
-                    title: proposal.title,
-                    description: proposal.description,
-                    state: proposal.state,
-                    startTime: proposal.startTime,
-                    dueDate: proposal.dueDate,
-                    yesVotes: proposal.yesVotes,
-                    noVotes: proposal.noVotes,
-                    abstain: proposal.abstain
-                });
-                index++;
+            Proposal storage p = proposals[_workspaceId][i];
+            if (_stateFilter == 3 || uint256(p.state) == _stateFilter) {
+                result[index++] = ProposalView(
+                    p.id,
+                    p.workspaceId,
+                    p.publisher,
+                    p.title,
+                    p.description,
+                    p.state,
+                    p.startTime,
+                    p.dueDate,
+                    p.yesVotes,
+                    p.noVotes,
+                    p.abstain
+                );
             }
         }
         return result;
@@ -729,25 +1024,22 @@ contract TaskSphere is ReentrancyGuard {
     function getProposalDetails(
         uint256 _workspaceId,
         uint256 _proposalId
-    )
-        external
-        view
-        returns (ProposalView memory)
-    {
-        Proposal storage proposal = proposals[_workspaceId][_proposalId];
-        return ProposalView({
-            id: proposal.id,
-            workspaceId: proposal.workspaceId,
-            publisher: proposal.publisher,
-            title: proposal.title,
-            description: proposal.description,
-            state: proposal.state,
-            startTime: proposal.startTime,
-            dueDate: proposal.dueDate,
-            yesVotes: proposal.yesVotes,
-            noVotes: proposal.noVotes,
-            abstain: proposal.abstain
-        });
+    ) external view returns (ProposalView memory) {
+        Proposal storage p = proposals[_workspaceId][_proposalId];
+        return
+            ProposalView(
+                p.id,
+                p.workspaceId,
+                p.publisher,
+                p.title,
+                p.description,
+                p.state,
+                p.startTime,
+                p.dueDate,
+                p.yesVotes,
+                p.noVotes,
+                p.abstain
+            );
     }
 
     /**
@@ -761,7 +1053,7 @@ contract TaskSphere is ReentrancyGuard {
         uint256 _proposalId,
         VoteOptions _vote
     ) external onlyWorkspaceMember(_workspaceId) {
-        if (msg.sender == address(0)) revert ZeroAddressDetected();
+        HuddleLib.validateAddress(msg.sender);
 
         Proposal storage proposal = proposals[_workspaceId][_proposalId];
         if (proposal.id == 0) revert NoMatchingProposal();
@@ -770,7 +1062,9 @@ contract TaskSphere is ReentrancyGuard {
         if (proposal.hasVoted[msg.sender]) revert UserAlreadyVoted();
 
         // Calculate vote weight as the number of whole XFI tokens
-        uint256 voteWeight = msg.sender.balance / 1e18;
+        uint256 voteWeight = workspaces[_workspaceId].token.balanceOf(
+            msg.sender
+        );
         if (voteWeight == 0) revert InsufficientFunds();
 
         // Mark as voted
@@ -780,13 +1074,14 @@ contract TaskSphere is ReentrancyGuard {
         if (_vote == VoteOptions.Yes) {
             proposal.yesVotes += voteWeight;
             proposal.yesVoters += 1;
-            userProposalVotes[msg.sender] += 1; // Tracks number of proposals voted on
+            userRecords[msg.sender].proposalVotedCounter += 1;
         } else if (_vote == VoteOptions.No) {
             proposal.noVotes += voteWeight;
-            proposal.yesVoters += 1;
-            userProposalVotes[msg.sender] += 1; // Tracks number of proposals voted on
+            proposal.noVoters += 1; // Fixed: was incorrectly yesVoters
+            userRecords[msg.sender].proposalVotedCounter += 1;
         } else {
-            proposal.abstain += 1; // Counts users who abstained
+            proposal.abstain += voteWeight; // Fixed: abstain should also use vote weight
+            proposal.abstainers += 1; // Count abstaining users
         }
 
         _addTransaction(0, "Vote casted");
@@ -830,9 +1125,8 @@ contract TaskSphere is ReentrancyGuard {
     function _withdrawWorkspaceFunds(
         uint256 _workspaceId,
         uint256 _taskId
-    ) internal {
+    ) internal OnlyvalidWorkspace(_workspaceId) {
         Workspace storage workspace = workspaces[_workspaceId];
-        if (workspace.id == 0) revert NoMatchingWorkspace();
 
         Task storage task = tasks[workspace.id][_taskId];
 
@@ -852,116 +1146,20 @@ contract TaskSphere is ReentrancyGuard {
         }
     }
 
-    /**
-     * @notice Updates the platform fee percentage (only admin)
-     * @param _newFeePercent New fee percentage in basis points (e.g., 250 = 2.5%)
-     */
-    function setPlatformFeePercent(uint256 _newFeePercent) external onlyOwner {
-        if (_newFeePercent > MAX_FEE_PERCENT) revert InvalidFeePercentage();
-
-        uint256 oldPercent = platformFeePercent;
-        platformFeePercent = _newFeePercent;
-
-        emit PlatformFeePercentUpdated(oldPercent, _newFeePercent);
-    }
-
-    /**
-     * @notice Withdraws accumulated platform fees (only admin)
-     * @param _token Address of token to withdraw (address(0) for native ETH)
-     * @param _recipient Address to receive the fees
-     */
-    function withdrawPlatformFees(
-        address _token,
-        address _recipient
-    ) external onlyOwner {
-        if (_recipient == address(0)) revert ZeroAddressDetected();
-
-        uint256 feeAmount;
-
-        if (_token == address(0)) {
-            feeAmount = ethPlatformFee;
-
-            // Withdraw native ETH platform fees
-            if (feeAmount == 0) revert NoPlatformFeesToWithdraw();
-
-            ethPlatformFee = 0;
-            (bool success, ) = _recipient.call{value: feeAmount}("");
-            if (!success) revert TransferFailed();
-
-            emit PlatformFeesWithdrawn(address(0), _recipient, feeAmount);
-        } else {
-            // Withdraw ERC20 token platform fees
-            if (!isTokenAccepted[_token]) revert TokenNotAccepted();
-
-            feeAmount = platformFees[_token];
-            if (feeAmount == 0) revert NoPlatformFeesToWithdraw();
-
-            platformFees[_token] = 0;
-            IERC20(_token).safeTransfer(_recipient, feeAmount);
-
-            emit PlatformFeesWithdrawn(_token, _recipient, feeAmount);
-        }
-
-        _addTransaction(feeAmount, "Fee withdrawal");
-    }
-
-    /**
-     * @notice Gets the current platform fee percentage
-     * @return Current platform fee percentage in basis points
-     */
     function getPlatformFeePercent() external view returns (uint256) {
         return platformFeePercent;
     }
 
-    /**
-     * @notice Gets accumulated platform fees for a token
-     * @param _token Token address (address(0) for native ETH)
-     * @return Amount of accumulated platform fees
-     */
     function getPlatformFees(address _token) external view returns (uint256) {
-        if (_token == address(0)) {
-            return ethPlatformFee;
-        } else {
-            return platformFees[_token];
-        }
+        return _token == address(0) ? ethPlatformFee : platformFees[_token];
     }
 
-    /**
-     * @notice Adds a token to the accepted tokens list
-     * @param _token Address of the token to accept
-     */
     function addAcceptedToken(address _token) external onlyOwner {
-        if (_token == address(0)) revert ZeroAddressDetected();
+        HuddleLib.validateAddress(_token);
         isTokenAccepted[_token] = true;
         acceptedTokens.push(_token);
     }
 
-    function withdrawPlatformOwner(
-        address _token,
-        address _recipient
-    ) external onlyOwner {
-        if (_recipient == address(0)) revert ZeroAddressDetected();
-
-        if (_token == address(0)) {
-            uint256 contractBalance = address(this).balance;
-            if (contractBalance == 0) revert InsufficientFunds();
-            (bool success, ) = _recipient.call{value: contractBalance}("");
-            if (!success) revert TransferFailed();
-        } else {
-            if (!isTokenAccepted[_token]) revert TokenNotAccepted();
-            uint256 tokenBalance = IERC20(_token).balanceOf(address(this));
-            if (tokenBalance == 0) revert InsufficientFunds();
-            IERC20(_token).safeTransfer(_recipient, tokenBalance);
-        }
-    }
-
-    /**
-     * @notice Gets a user's transaction history with pagination
-     * @param _user Address of the user
-     * @param offset Number of transactions to skip
-     * @param limit Maximum number of transactions to return
-     * @return Array of transactions for the user
-     */
     function getTransactionHistory(
         address _user,
         uint256 offset,
@@ -970,36 +1168,17 @@ contract TaskSphere is ReentrancyGuard {
         Transaction[] memory history = userTransactions[_user];
         uint256 length = history.length;
 
-        // If there are no transactions, return empty array
-        if (length == 0) {
-            return new Transaction[](0);
-        }
+        if (length == 0) return new Transaction[](0);
+        if (offset >= length) offset = length > limit ? length - limit : 0;
 
-        // Adjust offset if it's beyond array bounds
-        if (offset >= length) {
-            offset = length - (length % limit);
-            if (offset == length) {
-                offset = length > limit ? length - limit : 0;
-            }
-        }
-
-        // Calculate actual size of returned array
-        uint256 size = length - offset;
-        if (size > limit) {
-            size = limit;
-        }
-
-        // Create return array and populate it
+        uint256 size = HuddleLib.min(length - offset, limit);
         Transaction[] memory page = new Transaction[](size);
+
         for (uint256 i = 0; i < size; i++) {
             page[i] = history[length - 1 - (offset + i)];
         }
-
         return page;
     }
 
-    /**
-     * @notice Allows receiving XFI
-     */
     receive() external payable {}
 }

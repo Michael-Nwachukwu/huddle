@@ -12,7 +12,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 1,
           },
           viaIR: true,
         },
@@ -22,7 +22,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 1,
           },
           viaIR: true,
         },
@@ -44,6 +44,11 @@ const config: HardhatUserConfig = {
       url: configVariable("SEPOLIA_RPC_URL"),
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
+    testnet: {
+      type: "http",
+      url: "https://testnet.hashio.io/api",
+      accounts: [configVariable("HEDERA_PRIVATE_KEY")]
+    }
   },
 };
 
