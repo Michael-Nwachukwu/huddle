@@ -8,6 +8,8 @@ import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import Image from "next/image";
+import { useTheme } from "@/context/theme-context";
 
 const data = {
 	user: {
@@ -127,6 +129,7 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+	const { theme } = useTheme();
 	return (
 		<Sidebar
 			collapsible="offcanvas"
@@ -138,8 +141,33 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							asChild
 							className="data-[slot=sidebar-menu-button]:!p-1.5">
 							<a href="#">
-								<IconInnerShadowTop className="!size-5" />
-								<span className="text-base font-semibold">Acme Inc.</span>
+								{/* <IconInnerShadowTop className="!size-5" /> */}
+								{/* <span className="text-base font-semibold">Acme Inc.</span> */}
+								{/* <HuddleDark className="h-8 w-8" /> */}
+								{theme === "dark" ? (
+									<Image
+										src={"/huddle-dark.svg"}
+										alt="Huddle"
+										className="w-24 rounded-2xl"
+										width={60}
+										height={40}
+									/>
+								) : (
+									<Image
+										src={"/huddle-light.svg"}
+										alt="Huddle"
+										className="w-24 rounded-2xl"
+										width={60}
+										height={40}
+									/>
+								)}
+								<Image
+									src={"/huddle-light.svg"}
+									alt="Huddle"
+									className="w-24 rounded-2xl"
+									width={60}
+									height={40}
+								/>
 							</a>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
