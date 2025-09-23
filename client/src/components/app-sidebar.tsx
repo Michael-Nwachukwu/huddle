@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { IconCamera, IconChartBar, IconDashboard, IconDatabase, IconFileAi, IconFileDescription, IconFileWord, IconFolder, IconHelp, IconInnerShadowTop, IconListDetails, IconReport, IconSearch, IconSettings, IconUsers } from "@tabler/icons-react";
+import { IconChartBar, IconDashboard, IconDatabase, IconFileWord, IconFolder, IconHelp, IconListDetails, IconReport, IconSearch, IconSettings, IconUsers } from "@tabler/icons-react";
 
 import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import Image from "next/image";
 import { useTheme } from "@/context/theme-context";
 
@@ -24,17 +24,17 @@ const data = {
 			icon: IconDashboard,
 		},
 		{
-			title: "Lifecycle",
+			title: "Huddle",
 			url: "#",
 			icon: IconListDetails,
 		},
 		{
-			title: "Analytics",
+			title: "Tasks",
 			url: "#",
 			icon: IconChartBar,
 		},
 		{
-			title: "Projects",
+			title: "Governance",
 			url: "#",
 			icon: IconFolder,
 		},
@@ -42,54 +42,6 @@ const data = {
 			title: "Team",
 			url: "#",
 			icon: IconUsers,
-		},
-	],
-	navClouds: [
-		{
-			title: "Capture",
-			icon: IconCamera,
-			isActive: true,
-			url: "#",
-			items: [
-				{
-					title: "Active Proposals",
-					url: "#",
-				},
-				{
-					title: "Archived",
-					url: "#",
-				},
-			],
-		},
-		{
-			title: "Proposal",
-			icon: IconFileDescription,
-			url: "#",
-			items: [
-				{
-					title: "Active Proposals",
-					url: "#",
-				},
-				{
-					title: "Archived",
-					url: "#",
-				},
-			],
-		},
-		{
-			title: "Prompts",
-			icon: IconFileAi,
-			url: "#",
-			items: [
-				{
-					title: "Active Proposals",
-					url: "#",
-				},
-				{
-					title: "Archived",
-					url: "#",
-				},
-			],
 		},
 	],
 	navSecondary: [
@@ -109,19 +61,19 @@ const data = {
 			icon: IconSearch,
 		},
 	],
-	documents: [
+	tools: [
 		{
-			name: "Data Library",
+			name: "Notepad",
 			url: "#",
 			icon: IconDatabase,
 		},
 		{
-			name: "Reports",
+			name: "Huddle AI",
 			url: "#",
 			icon: IconReport,
 		},
 		{
-			name: "Word Assistant",
+			name: "Agent (coming soon)",
 			url: "#",
 			icon: IconFileWord,
 		},
@@ -137,45 +89,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton
-							asChild
-							className="data-[slot=sidebar-menu-button]:!p-1.5">
-							<a href="#">
-								{/* <IconInnerShadowTop className="!size-5" /> */}
-								{/* <span className="text-base font-semibold">Acme Inc.</span> */}
-								{/* <HuddleDark className="h-8 w-8" /> */}
-								{theme === "dark" ? (
-									<Image
-										src={"/huddle-dark.svg"}
-										alt="Huddle"
-										className="w-24 rounded-2xl"
-										width={60}
-										height={40}
-									/>
-								) : (
-									<Image
-										src={"/huddle-light.svg"}
-										alt="Huddle"
-										className="w-24 rounded-2xl"
-										width={60}
-										height={40}
-									/>
-								)}
+						<div className="pb-2">
+							{theme === "dark" ? (
 								<Image
-									src={"/huddle-light.svg"}
+									src={"/logo-dark.svg"}
 									alt="Huddle"
-									className="w-24 rounded-2xl"
+									className="w-28"
 									width={60}
 									height={40}
 								/>
-							</a>
-						</SidebarMenuButton>
+							) : (
+								<Image
+									src={"/logo-light-2.svg"}
+									alt="Huddle"
+									className="w-28"
+									width={60}
+									height={40}
+								/>
+							)}
+						</div>
 					</SidebarMenuItem>
 				</SidebarMenu>
 			</SidebarHeader>
 			<SidebarContent>
 				<NavMain items={data.navMain} />
-				<NavDocuments items={data.documents} />
+				<NavDocuments items={data.tools} />
 				<NavSecondary
 					items={data.navSecondary}
 					className="mt-auto"

@@ -23,7 +23,12 @@ const initialState: ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({ children, defaultTheme = "system", storageKey = "vite-ui-theme", ...props }: ThemeProviderProps) {
-	const [theme, setTheme] = useState<Theme>(() => (localStorage?.getItem(storageKey) as Theme) || defaultTheme);
+	const [theme, setTheme] = useState<Theme>(() => {
+		if (typeof window !== 'undefined') {
+			return localStorage?.getItem(storageKey) as Theme || defaultTheme;
+		}
+		return defaultTheme;
+	});
 
 	useEffect(() => {
 		const root = window.document.documentElement;

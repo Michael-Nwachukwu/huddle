@@ -61,6 +61,7 @@ contract Huddle is ReentrancyGuard {
     error InvalidFeePercentage();
     error NoPlatformFeesToWithdraw();
     error UserAlreadyVoted();
+    error NotWhitelistedMember();
 
     struct Proposal {
         uint256 id;
@@ -120,6 +121,7 @@ contract Huddle is ReentrancyGuard {
         WorkspaceMember[] members;
         WorkspaceNft token;
         mapping(address => uint256) tokenBalance;
+        mapping (address => bool) isUserWhitelistedToJoin;
     }
 
     struct Task {
@@ -305,7 +307,8 @@ contract Huddle is ReentrancyGuard {
     function createWorkspace(
         string calldata _name,
         string calldata _symbol,
-        string calldata _topicId
+        string calldata _topicId,
+        address[] calldata _whitelistedMembers
     ) external returns (uint256 workspaceId) {
         HuddleLib.validateAddress(msg.sender);
         HuddleLib.validateString(_name);
@@ -326,6 +329,12 @@ contract Huddle is ReentrancyGuard {
         workspace.token = workspaceToken;
         workspace.workspaceName = _name;
         workspace.topicId = _topicId;
+
+        for (uint i = 0; i < _whitelistedMembers.length; i++) {
+            address member = _whitelistedMembers[i];
+            HuddleLib.validateAddress(member);
+            workspace.isUserWhitelistedToJoin[member] = true;   
+        }
 
         workspaceCounter++;
 
@@ -391,6 +400,9 @@ contract Huddle is ReentrancyGuard {
     ) public OnlyvalidWorkspace(_workspaceId) returns (uint256 tokenId) {
         Workspace storage workspace = workspaces[_workspaceId];
         HuddleLib.validateAddress(msg.sender);
+
+        if (!workspace.isUserWhitelistedToJoin[msg.sender])
+            revert NotWhitelistedMember();
 
         // Mint membership NFT to the new member
         tokenId = workspace.token.safeMint(msg.sender);
