@@ -401,8 +401,7 @@ contract Huddle is ReentrancyGuard {
         Workspace storage workspace = workspaces[_workspaceId];
         HuddleLib.validateAddress(msg.sender);
 
-        if (!workspace.isUserWhitelistedToJoin[msg.sender])
-            revert NotWhitelistedMember();
+        if (!workspace.isUserWhitelistedToJoin[msg.sender]) revert NotWhitelistedMember();
 
         // Mint membership NFT to the new member
         tokenId = workspace.token.safeMint(msg.sender);
@@ -942,6 +941,19 @@ contract Huddle is ReentrancyGuard {
         }
 
         return topMembers;
+    }
+
+    // Add these to main Huddle contract
+    function isUserAssignedToTask(uint256 _workspaceId, uint256 _taskId, address _user) external view returns (bool) {
+        return tasks[_workspaceId][_taskId].isUserAssignedToTask[_user];
+    }
+
+    function getTaskAssignees(uint256 _workspaceId, uint256 _taskId) external view returns (address[] memory) {
+        return tasks[_workspaceId][_taskId].assignees;
+    }
+
+    function getWorkspaceToken(uint256 _workspaceId) external view returns (address) {
+        return address(workspaces[_workspaceId].token);
     }
 
     /**

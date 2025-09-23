@@ -62,6 +62,11 @@ export const abi = [
     },
     {
         "inputs": [],
+        "name": "NotWhitelistedMember",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "NotWorkspaceOwner",
         "type": "error"
     },
@@ -722,6 +727,11 @@ export const abi = [
                 "internalType": "string",
                 "name": "_topicId",
                 "type": "string"
+            },
+            {
+                "internalType": "address[]",
+                "name": "_whitelistedMembers",
+                "type": "address[]"
             }
         ],
         "name": "createWorkspace",
@@ -945,6 +955,30 @@ export const abi = [
     {
         "inputs": [
             {
+                "internalType": "uint256",
+                "name": "_workspaceId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_taskId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getTaskAssignees",
+        "outputs": [
+            {
+                "internalType": "address[]",
+                "name": "",
+                "type": "address[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "address",
                 "name": "_user",
                 "type": "address"
@@ -1071,6 +1105,25 @@ export const abi = [
                 "internalType": "uint256",
                 "name": "_workspaceId",
                 "type": "uint256"
+            }
+        ],
+        "name": "getWorkspaceToken",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_workspaceId",
+                "type": "uint256"
             },
             {
                 "internalType": "uint256",
@@ -1103,6 +1156,35 @@ export const abi = [
             }
         ],
         "name": "isTokenAccepted",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_workspaceId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_taskId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_user",
+                "type": "address"
+            }
+        ],
+        "name": "isUserAssignedToTask",
         "outputs": [
             {
                 "internalType": "bool",
