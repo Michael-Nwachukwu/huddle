@@ -20,17 +20,17 @@ const data = {
 	navMain: [
 		{
 			title: "Dashboard",
-			url: "#",
+			url: "/dashboard",
 			icon: IconDashboard,
 		},
 		{
 			title: "Huddle",
-			url: "#",
+			url: "/",
 			icon: IconListDetails,
 		},
 		{
 			title: "Tasks",
-			url: "#",
+			url: "/dashboard/tasks",
 			icon: IconChartBar,
 		},
 		{
