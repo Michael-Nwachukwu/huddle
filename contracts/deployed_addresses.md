@@ -1,3 +1,3 @@
 USDT TOKEN - 0x694A10e38D1a7E3b15D6361AdaB4f3Be188b13CA
-Huddle Contract deployed at: 0x8550BE174E4c0cfF3941dF6Ce2D6e184868CD89F
-HuddleTaskReader Contract deployed at: 0x71a1A87866De3feC4A658f9B061Bf7DB18829162
+Huddle Contract deployed at: 0xbBCd940Cd8094B14496F7948369f2db3cb8bd2D2
+HuddleTaskReader Contract deployed at: 0x27d6265CD842Ac4b2ba7dD4de1889308003aB8a1

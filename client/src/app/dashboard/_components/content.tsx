@@ -1,7 +1,9 @@
 import { Calendar, CreditCard, Wallet } from "lucide-react"
-import List01 from "./list-01"
-import List02 from "./list-02"
-import List03 from "./list-03"
+import TransactionHistory from "./tx-history"
+import { Button } from "@/components/ui/button"
+import WorkspaceMembers from "./workspace-members"
+import DashboardTasks from "./dashboard-tasks"
+import { CreateTaskDrawer } from "@/components/create-task-drawer"
 
 export default function Content() {
   return (
@@ -9,11 +11,14 @@ export default function Content() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <div className="bg-white dark:bg-[#0e0e10] rounded-xl p-6 flex flex-col items-start justify-start border border-gray-200 dark:border-[#1F1F23] col-span-2">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-left flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-50" />
-            Catch up on recent tasks
-          </h2>
-          <List03 />
+          <div className="flex justify-between items-center w-full mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white text-left flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-50" />
+              Catch up on recent tasks
+            </h2>
+            <CreateTaskDrawer />
+          </div>
+          <DashboardTasks />
         </div>
 
         <div className="bg-white dark:bg-[#0e0e10] rounded-xl p-6 flex flex-col border border-gray-200 dark:border-[#1F1F23]">
@@ -22,7 +27,7 @@ export default function Content() {
             Workspace Members
           </h2>
           <div className="flex-1">
-            <List01 className="h-full" />
+            <WorkspaceMembers />
           </div>
         </div>
 
@@ -32,7 +37,7 @@ export default function Content() {
             Recent Transactions
           </h2>
           <div className="flex-1">
-            <List02 className="h-full" />
+            <TransactionHistory />
           </div>
         </div>
       </div>

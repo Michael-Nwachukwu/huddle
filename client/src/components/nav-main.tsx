@@ -2,6 +2,8 @@
 
 import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react";
 import { SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { WorkspaceContextSwitcher } from "./WorkspaceContextSwitcher";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export function NavMain({
 	items,
@@ -12,17 +14,20 @@ export function NavMain({
 		icon?: Icon;
 	}[];
 }) {
+	const { userWorkspaces, activeWorkspace } = useWorkspace();
 	return (
 		<SidebarGroup>
 			<SidebarGroupContent className="flex flex-col gap-2">
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton
-							tooltip="Quick Create"
-							className="bg-[#6b840a] dark:bg-[#caef35]/80 text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear">
-							<IconCirclePlusFilled />
-							<span>Create Workspace</span>
-						</SidebarMenuButton>
+						<WorkspaceContextSwitcher
+							workspaces={userWorkspaces}
+							activeWorkspace={
+								activeWorkspace
+									? { workspaceId: activeWorkspace.id, name: activeWorkspace.workspaceName }
+									: { workspaceId: "", name: "" }
+							}
+						/>
 					</SidebarMenuItem>
 				</SidebarMenu>
 				<SidebarMenu>

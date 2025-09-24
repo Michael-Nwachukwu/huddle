@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Address from "./Address"
 import { main } from "@/lib/createTopic"
 import {
@@ -18,6 +18,9 @@ import { toast } from "sonner"
 import { contract } from "@/lib/contract"
 import { client } from "../../client"
 import { hederaTestnet } from "@/utils/chains"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 // Utility function to validate Ethereum address
 function isValidAddress(address: string): boolean {
@@ -35,6 +38,8 @@ export function CreateWorkspaceForm({
   const [currentAddress, setCurrentAddress] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const account = useActiveAccount();
+  const { switchWorkspace } = useWorkspace();
+  const router = useRouter();
 
   // Use the thirdweb hook for sending transactions
   const { mutateAsync: sendTransaction, isPending: isContractCreating } = useSendTransaction();
@@ -42,17 +47,23 @@ export function CreateWorkspaceForm({
   // Add address to invitees list
   const addInvitee = () => {
     if (!currentAddress.trim()) {
-      toast.error("Please enter an address");
+      toast.error("Please enter an address", {
+        position: "top-right"
+      });
       return;
     }
 
     if (!isValidAddress(currentAddress)) {
-      toast.error("Invalid Ethereum address format");
+      toast.error("Invalid Ethereum address format", {
+        position: "top-right"
+      });
       return;
     }
 
     if (invitees.includes(currentAddress)) {
-      toast.error("Address already added");
+      toast.error("Address already added", {
+        position: "top-right"
+      });
       return;
     }
 
@@ -60,6 +71,13 @@ export function CreateWorkspaceForm({
     setCurrentAddress("");
     toast.success("Address added successfully");
   };
+
+  // useEffect(() => {
+  //   if (account) {
+  //     setCurrentAddress(account.address);
+  //     addInvitee();
+  //   }
+  // }, [account]);
 
   // Remove address from invitees list
   const removeInvitee = (indexToRemove: number) => {
@@ -74,7 +92,7 @@ export function CreateWorkspaceForm({
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if(!account) {
+    if (!account) {
       toast.error("Please connect your wallet", {
         position: "top-right"
       });
@@ -82,7 +100,9 @@ export function CreateWorkspaceForm({
     }
 
     if (!workspaceName.trim()) {
-      toast.error("Please enter a workspace name");
+      toast.error("Please enter a workspace name", {
+        position: "top-right"
+      });
       return;
     }
 
@@ -159,6 +179,8 @@ export function CreateWorkspaceForm({
       const workspaceId = Number(logs[0].args.workspaceId);
       console.log("Workspace created with ID:", workspaceId);
 
+      switchWorkspace(workspaceId?.toString());
+
       toast.dismiss(toastId);
       toast.success(`Workspace "${workspaceName}" created successfully! ID: ${workspaceId}`, {
         position: "top-right"
@@ -169,8 +191,7 @@ export function CreateWorkspaceForm({
       setInvitees([]);
       setCurrentAddress("");
 
-      // You can add additional logic here, like redirecting to the workspace
-      // or calling an API to store additional workspace data
+      router.push(`/dashboard`);
 
     } catch (error) {
       toast.dismiss(toastId);
@@ -280,6 +301,9 @@ export function CreateWorkspaceForm({
               >
                 {isSubmitting ? "Creating..." : "Create"}
               </Button>
+            </div>
+            <div className="mt-5 text-center">
+              <Link href="/workspace/join" className="text-sm font-light text-[#6b840a] dark:text-[#caef35]/80 text-center underline underline-offset-2">Join a workspace</Link>
             </div>
           </form>
         </CardContent>

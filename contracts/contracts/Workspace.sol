@@ -140,6 +140,7 @@ contract Huddle is ReentrancyGuard {
         string topicId;
         string fileId;
         address[] assignees;
+        TaskPriority priority;
         mapping(address => bool) isUserAssignedToTask;
         mapping(address => bool) hasAssigneeClaimedReward;
     }
@@ -183,7 +184,7 @@ contract Huddle is ReentrancyGuard {
 
     // Efficient access mappings
     mapping(uint256 => mapping(uint256 => Task)) public tasks; // workspaceId => taskId => task
-    mapping(uint256 => mapping(uint256 => Proposal)) public proposals;
+    mapping(uint256 => mapping(uint256 => Proposal)) public proposals; // workspaceId => proposalId => proposal
 
     // Platform fee storage
     mapping(address => uint256) public platformFees; // ERC20 token fees
@@ -330,16 +331,14 @@ contract Huddle is ReentrancyGuard {
         workspace.workspaceName = _name;
         workspace.topicId = _topicId;
 
-        for (uint i = 0; i < _whitelistedMembers.length; i++) {
-            address member = _whitelistedMembers[i];
-            HuddleLib.validateAddress(member);
-            workspace.isUserWhitelistedToJoin[member] = true;   
-        }
+        workspace.isUserWhitelistedToJoin[msg.sender] = true;   
+
+        inviteToWorkspace(workspaceId, _whitelistedMembers);
 
         workspaceCounter++;
 
         // Add creator as the first member
-        joinWorkspace(workspace.id);
+        joinWorkspace(workspace.id, "Owner");
 
         _addTransaction(0, "Create workspace");
 
@@ -396,7 +395,8 @@ contract Huddle is ReentrancyGuard {
      * @return tokenId ID of the minted membership NFT
      */
     function joinWorkspace(
-        uint256 _workspaceId
+        uint256 _workspaceId, 
+        string memory _role
     ) public OnlyvalidWorkspace(_workspaceId) returns (uint256 tokenId) {
         Workspace storage workspace = workspaces[_workspaceId];
         HuddleLib.validateAddress(msg.sender);
@@ -407,7 +407,7 @@ contract Huddle is ReentrancyGuard {
         tokenId = workspace.token.safeMint(msg.sender);
         WorkspaceMember memory newMember = WorkspaceMember({
             member: msg.sender,
-            role: "owner"
+            role: _role
         });
 
         workspace.members.push(newMember);
@@ -421,6 +421,22 @@ contract Huddle is ReentrancyGuard {
 
         emit WorkspaceMemberAdded(_workspaceId, msg.sender, tokenId);
         return tokenId;
+    }
+
+    function getWorkspaceMembers(uint256 _workspaceId) external view returns (WorkspaceMember[] memory) {
+        Workspace storage workspace = workspaces[_workspaceId];
+        return workspace.members;
+    }
+
+    function inviteToWorkspace(uint256 _workspaceId, address[] calldata _users) OnlyvalidWorkspace(_workspaceId) public {
+
+        Workspace storage workspace = workspaces[_workspaceId];
+
+        for (uint i = 0; i < _users.length; i++) {
+            address member = _users[i];
+            HuddleLib.validateAddress(member);
+            workspace.isUserWhitelistedToJoin[member] = true;   
+        }
     }
 
     /**
@@ -445,7 +461,8 @@ contract Huddle is ReentrancyGuard {
         uint256 _startTime,
         uint256 _dueDate,
         string calldata _topicId,
-        string calldata _fileId
+        string calldata _fileId,
+        TaskPriority _taskPriority
     )
         external
         payable
@@ -517,6 +534,7 @@ contract Huddle is ReentrancyGuard {
         task.fileId = _fileId;
         task.startTime = _startTime;
         task.dueDate = _dueDate;
+        task.priority = _taskPriority;
 
         workspace.totalActiveTasks += 1;
 
@@ -917,30 +935,57 @@ contract Huddle is ReentrancyGuard {
         return userRecords[_user].workspaces;
     }
 
-    function getWorkspaceLeaderBoard(
+   function getWorkspaceLeaderBoard(
         uint256 _workspaceId
     ) external view returns (LeaderBoardEntry[] memory) {
         Workspace storage workspace = workspaces[_workspaceId];
-        uint256 resultSize = HuddleLib.min(workspace.members.length, 5);
-
-        LeaderBoardEntry[] memory topMembers = new LeaderBoardEntry[](
-            resultSize
-        );
-
-        for (uint256 i = 0; i < resultSize; i++) {
-            address memberAddress = workspace.members[i].member;
-            UserStats memory stats = userRecords[memberAddress];
-
-            topMembers[i] = LeaderBoardEntry(
-                memberAddress,
-                stats.completedTaskCounter,
-                stats.nativeRewardAmountSum,
-                stats.ercRewardAmountSum,
-                stats.proposalVotedCounter
-            );
+        uint256 memberCount = workspace.members.length;
+        
+        if (memberCount == 0) {
+            return new LeaderBoardEntry[](0);
         }
 
-        return topMembers;
+        // Create array with all members and their stats
+        HuddleLib.LeaderBoardEntry[] memory allMembers = new HuddleLib.LeaderBoardEntry[](memberCount);
+        
+        for (uint256 i = 0; i < memberCount; i++) {
+            address memberAddress = workspace.members[i].member;
+            UserStats memory stats = userRecords[memberAddress];
+            
+            uint256 combinedScore = HuddleLib.calculateCombinedScore(
+                stats.completedTaskCounter,
+                stats.proposalVotedCounter
+            );
+            
+            allMembers[i] = HuddleLib.LeaderBoardEntry({
+                user: memberAddress,
+                tasksCompleted: stats.completedTaskCounter,
+                hbarEarned: stats.nativeRewardAmountSum,
+                erc20Earned: stats.ercRewardAmountSum,
+                proposalsVoted: stats.proposalVotedCounter,
+                combinedScore: combinedScore
+            });
+        }
+        
+        // Sort all members by combined score
+        HuddleLib.LeaderBoardEntry[] memory sortedMembers = HuddleLib.sortLeaderboardEntries(allMembers);
+        
+        // Get top 5 performers
+        HuddleLib.LeaderBoardEntry[] memory topPerformers = HuddleLib.getTopPerformers(sortedMembers, 5);
+        
+        // Convert back to the original LeaderBoardEntry format
+        LeaderBoardEntry[] memory result = new LeaderBoardEntry[](topPerformers.length);
+        for (uint256 i = 0; i < topPerformers.length; i++) {
+            result[i] = LeaderBoardEntry({
+                user: topPerformers[i].user,
+                tasksCompleted: topPerformers[i].tasksCompleted,
+                hbarEarned: topPerformers[i].hbarEarned,
+                erc20Earned: topPerformers[i].erc20Earned,
+                proposalsVoted: topPerformers[i].proposalsVoted
+            });
+        }
+        
+        return result;
     }
 
     // Add these to main Huddle contract
@@ -1043,27 +1088,6 @@ contract Huddle is ReentrancyGuard {
             }
         }
         return result;
-    }
-
-    function getProposalDetails(
-        uint256 _workspaceId,
-        uint256 _proposalId
-    ) external view returns (ProposalView memory) {
-        Proposal storage p = proposals[_workspaceId][_proposalId];
-        return
-            ProposalView(
-                p.id,
-                p.workspaceId,
-                p.publisher,
-                p.title,
-                p.description,
-                p.state,
-                p.startTime,
-                p.dueDate,
-                p.yesVotes,
-                p.noVotes,
-                p.abstain
-            );
     }
 
     /**
