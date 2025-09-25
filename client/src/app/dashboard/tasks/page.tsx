@@ -11,7 +11,6 @@ import { ChevronDown, MoreHorizontal, Search, Timer, ListTodo, CheckCircle, Circ
 import { extendedTasks } from "./extended-tasks";
 import ViewToolbar from "./_components/view-toolbar";
 import TableView from "./_components/table-view";
-import List03 from "../_components/list-03";
 import GridView from "./_components/grid-view";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
