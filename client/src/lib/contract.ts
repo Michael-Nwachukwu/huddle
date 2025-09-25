@@ -5,5 +5,5 @@ import { client } from "../../client";
 export const contract = getContract({
     client: client,
     chain: hederaTestnet,
-    address: "0xE7d84441a6F990AbE2126Fb725B5F6Ed87349856"
+    address: "0xEBF42514DeD00D23358706bEB810223744Bc9BD5"
 });

@@ -1,42 +1,7 @@
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-
-// Data array for cards
-const cardData = [
-	{
-		id: 1,
-		title: "Total Tasks",
-		value: "10",
-		trend: "up",
-		percentage: "+12.5%",
-		footerText: "More tasks this month",
-	},
-	{
-		id: 2,
-		title: "Completed Tasks",
-		value: "8",
-		trend: "down",
-		percentage: "-20%",
-		footerText: "Fewer tasks than last month",
-	},
-	{
-		id: 3,
-		title: "Tasks In-Progress",
-		value: "2",
-		trend: "up",
-		percentage: "+12.5%",
-		footerText: "Increased task activity",
-	},
-	{
-		id: 4,
-		title: "Workspace Reserve",
-		value: "$4,500",
-		trend: "up",
-		percentage: "+4.5%",
-		footerText: "Growing financial reserve",
-	},
-];
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface StatsCardType {
 	title: string;
@@ -74,6 +39,42 @@ function MetricCard({ title, value, trend, percentage, footerText }: StatsCardTy
 
 // Main SectionCards Component
 export function SectionCards() {
+	const { activeWorkspace } = useWorkspace();
+
+	const cardData = [
+		{
+			id: 1,
+			title: "Total Tasks",
+			value: activeWorkspace?.taskCounter || "0",
+			trend: "up",
+			percentage: "+12.5%",
+			footerText: "More tasks this month",
+		},
+		{
+			id: 2,
+			title: "Completed Tasks",
+			value: activeWorkspace?.completedTaskCounter || "0",
+			trend: "down",
+			percentage: "-20%",
+			footerText: "Fewer tasks than last month",
+		},
+		{
+			id: 3,
+			title: "Tasks In-Progress",
+			value: activeWorkspace?.inProgressTaskCounter || "0",
+			trend: "up",
+			percentage: "+12.5%",
+			footerText: "Increased task activity",
+		},
+		{
+			id: 4,
+			title: "Total Proposals",
+			value: activeWorkspace?.proposalCounter || "0",
+			trend: "up",
+			percentage: "+4.5%",
+			footerText: "More proposals this month",
+		}
+	];
 	return (
 		<div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
 			{cardData.map((card) => (

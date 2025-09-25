@@ -220,7 +220,7 @@ interface ListItem {
   progress?: number
 }
 
-interface List03Props {
+interface DashboardTasksProps {
   items?: ListItem[]
   className?: string
 }
@@ -249,7 +249,7 @@ const statusConfig = {
   },
 }
 
-export default function List03({ items = ITEMS, className }: List03Props) {
+export default function DashboardTasks({ items = ITEMS, className }: DashboardTasksProps) {
   return (
     <div className={cn("w-full overflow-x-auto scrollbar-none", className)}>
       <div className="flex gap-3 min-w-full p-1">

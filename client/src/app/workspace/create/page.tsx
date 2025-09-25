@@ -3,6 +3,7 @@ import ConnectWalletButton from "@/components/ConnectWalletButton";
 import { CreateWorkspaceForm } from "@/components/create-workspace-form"
 import { useTheme } from "@/context/theme-context";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function LoginPage() {
   const { theme } = useTheme();
@@ -11,7 +12,7 @@ export default function LoginPage() {
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-3xl space-y-5">
         <div className="flex justify-between items-center">
-          <div>
+          <Link href="/dashboard">
             {theme === "dark" ? (
               <Image
                 src={"/logo-dark.svg"}
@@ -29,7 +30,7 @@ export default function LoginPage() {
                 height={40}
               />
             )}
-          </div>
+          </Link>
           <ConnectWalletButton />
         </div>
         <CreateWorkspaceForm />
