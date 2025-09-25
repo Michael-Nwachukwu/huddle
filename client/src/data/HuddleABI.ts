@@ -799,87 +799,6 @@ export const abi = [
             },
             {
                 "internalType": "uint256",
-                "name": "_proposalId",
-                "type": "uint256"
-            }
-        ],
-        "name": "getProposalDetails",
-        "outputs": [
-            {
-                "components": [
-                    {
-                        "internalType": "uint256",
-                        "name": "id",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "workspaceId",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "publisher",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "string",
-                        "name": "title",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "string",
-                        "name": "description",
-                        "type": "string"
-                    },
-                    {
-                        "internalType": "enum Huddle.ProposalState",
-                        "name": "state",
-                        "type": "uint8"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "startTime",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "dueDate",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "yesVotes",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "noVotes",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "abstain",
-                        "type": "uint256"
-                    }
-                ],
-                "internalType": "struct Huddle.ProposalView",
-                "name": "",
-                "type": "tuple"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_workspaceId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
                 "name": "_stateFilter",
                 "type": "uint256"
             }
@@ -1107,6 +1026,37 @@ export const abi = [
                 "type": "uint256"
             }
         ],
+        "name": "getWorkspaceMembers",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "member",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "role",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct Huddle.WorkspaceMember[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_workspaceId",
+                "type": "uint256"
+            }
+        ],
         "name": "getWorkspaceToken",
         "outputs": [
             {
@@ -1145,6 +1095,24 @@ export const abi = [
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_workspaceId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address[]",
+                "name": "_users",
+                "type": "address[]"
+            }
+        ],
+        "name": "inviteToWorkspace",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -1201,6 +1169,11 @@ export const abi = [
                 "internalType": "uint256",
                 "name": "_workspaceId",
                 "type": "uint256"
+            },
+            {
+                "internalType": "string",
+                "name": "_role",
+                "type": "string"
             }
         ],
         "name": "joinWorkspace",

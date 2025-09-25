@@ -16,7 +16,13 @@ interface IHuddle {
         inProgress,
         assigneeDone
     }
-    
+
+    enum TaskPriority {
+        High,
+        Medium,
+        Low
+    }    
+
     // Structs
     struct WorkspaceContextData {
         uint256 workspaceId;
@@ -55,7 +61,8 @@ interface IHuddle {
         uint256 startTime,
         uint256 dueDate,
         string memory topicId,
-        string memory fileId
+        string memory fileId,
+        IHuddle.TaskPriority priority
     );
     
     // User workspaces
@@ -111,6 +118,7 @@ contract HuddleTaskReader {
         string topicId;
         string fileId;
         address[] assignees;
+        IHuddle.TaskPriority priority;
         uint256 assigneeCount;
     }
     
@@ -122,19 +130,12 @@ contract HuddleTaskReader {
         bool hasPreviousPage;
     }
     
-    struct TaskStats {
-        uint256 active;
-        uint256 completed;
-        uint256 inProgress;
-        uint256 archived;
-        uint256 assigneeDone;
-        uint256 total;
-    }
-    
     error InvalidHuddleContract();
     error InvalidPaginationParams();
     error WorkspaceNotFound();
     error NotWorkspaceMember();
+
+    mapping(address => string) public usernames;
     
     /**
      * @notice Constructor
@@ -211,7 +212,7 @@ contract HuddleTaskReader {
                 
                 for (uint256 i = 1; i <= taskCounter; ++i) {
                     if (huddleContract.isUserAssignedToTask(workspaceId, i, _user)) {
-                        (, , , , IHuddle.TaskState taskState, , , , , , , , , ) = huddleContract.tasks(workspaceId, i);
+                        (, , , , IHuddle.TaskState taskState, , , , , , , , , , ) = huddleContract.tasks(workspaceId, i);
                         
                         if (_stateFilter == 255 || uint8(taskState) == _stateFilter) {
                             totalTaskCount++;
@@ -243,7 +244,7 @@ contract HuddleTaskReader {
                 
                 for (uint256 i = 1; i <= taskCounter && resultIndex < resultSize; ++i) {
                     if (huddleContract.isUserAssignedToTask(workspaceId, i, _user)) {
-                        (, , , , IHuddle.TaskState taskState, , , , , , , , , ) = huddleContract.tasks(workspaceId, i);
+                        (, , , , IHuddle.TaskState taskState, , , , , , , , , , ) = huddleContract.tasks(workspaceId, i);
                         
                         if (_stateFilter == 255 || uint8(taskState) == _stateFilter) {
                             if (skipCount < _offset) {
@@ -343,7 +344,7 @@ contract HuddleTaskReader {
         uint8 _stateFilter
     ) internal view returns (bool) {
         
-        (, , , , IHuddle.TaskState taskState, , , , , , , , , ) = huddleContract.tasks(_workspaceId, _taskId);
+        (, , , , IHuddle.TaskState taskState, , , , , , , , , , ) = huddleContract.tasks(_workspaceId, _taskId);
         
         // Skip non-existent tasks (taskState would be default 0 if not set, but id check in tasks getter would be better)
         
@@ -375,7 +376,8 @@ contract HuddleTaskReader {
             uint256 startTime,
             uint256 dueDate,
             string memory topicId,
-            string memory fileId
+            string memory fileId,
+            IHuddle.TaskPriority priority
         ) = huddleContract.tasks(_workspaceId, _taskId);
         
         address[] memory assignees;
@@ -402,7 +404,8 @@ contract HuddleTaskReader {
             topicId: topicId,
             fileId: fileId,
             assignees: assignees,
-            assigneeCount: assignees.length
+            assigneeCount: assignees.length,
+            priority: priority
         });
     }
     
@@ -414,5 +417,9 @@ contract HuddleTaskReader {
             hasNextPage: false,
             hasPreviousPage: false
         });
+    }
+
+    function setUserName(string calldata _name) external {
+        usernames[msg.sender] = _name;
     }
 }

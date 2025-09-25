@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
+import { useHederaAccount } from '@/hooks/use-hedera-account';
 
 interface AddressProps {
     address: string;
 }
 
 const Address: React.FC<AddressProps> = ({ address }) => {
-    // Function to shorten the Ethereum address
+
+    const { data } = useHederaAccount(address);
+
     const shortenAddress = (addr: string): string => {
         if (!addr || addr.length < 10 || !addr.startsWith('0x')) {
             return addr || 'Invalid Address';
@@ -35,7 +38,7 @@ const Address: React.FC<AddressProps> = ({ address }) => {
                 height={32}
                 className="rounded-full w-6"
             />
-            <span>{shortenAddress(address)}</span>
+            <span className='font-light text-gray-400 font-mono'>{data?.account || shortenAddress(address)}</span>
         </div>
     );
 };

@@ -5,22 +5,19 @@ import { closestCenter, DndContext, KeyboardSensor, MouseSensor, TouchSensor, us
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight, IconDotsVertical, IconLayoutColumns, IconTrendingUp } from "@tabler/icons-react";
+import { IconChevronDown, IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight, IconDotsVertical, IconLayoutColumns } from "@tabler/icons-react";
 import { ColumnDef, ColumnFiltersState, flexRender, getCoreRowModel, getFacetedRowModel, getFacetedUniqueValues, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, Row, SortingState, useReactTable, VisibilityState } from "@tanstack/react-table";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { z } from "zod";
-
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Image from "next/image";
+import { useReadContract } from "thirdweb/react";
+import { contract } from "@/lib/contract";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import Address from "./Address";
 
 // TypeScript interface from ABI
 interface LeaderBoardEntry {
@@ -31,51 +28,10 @@ interface LeaderBoardEntry {
 	proposalsVoted: number;
 }
 
-// Dummy leaderboard array with 5 members
-const dummyLeaderBoard: LeaderBoardEntry[] = [
-	{
-		user: "0x1234567890123456789012345678901234567890",
-		tasksCompleted: 150,
-		hbarEarned: 5000,
-		erc20Earned: 10000,
-		proposalsVoted: 45,
-	},
-	{
-		user: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-		tasksCompleted: 120,
-		hbarEarned: 4000,
-		erc20Earned: 8000,
-		proposalsVoted: 38,
-	},
-	{
-		user: "0x1111111111111111111111111111111111111111",
-		tasksCompleted: 100,
-		hbarEarned: 3500,
-		erc20Earned: 7000,
-		proposalsVoted: 30,
-	},
-	{
-		user: "0x2222222222222222222222222222222222222222",
-		tasksCompleted: 80,
-		hbarEarned: 2500,
-		erc20Earned: 5000,
-		proposalsVoted: 25,
-	},
-	{
-		user: "0x3333333333333333333333333333333333333333",
-		tasksCompleted: 50,
-		hbarEarned: 1500,
-		erc20Earned: 3000,
-		proposalsVoted: 15,
-	},
-];
-
-// Add id and rank for table usage
-const leaderBoardData = dummyLeaderBoard.map((entry, index) => ({
-	id: index + 1,
-	rank: index + 1,
-	...entry,
-}));
+interface ProcessedLeaderBoardEntry extends LeaderBoardEntry {
+	id: number;
+	rank: number;
+}
 
 export const schema = z.object({
 	id: z.number(),
@@ -97,8 +53,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 		accessorKey: "user",
 		header: "User",
 		cell: ({ row }) => {
-			const shortened = `${row.original.user.slice(0, 6)}...${row.original.user.slice(-4)}`;
-			return <TableCellViewer item={row.original} shortenedUser={shortened} />;
+			return <Address address={row.original.user} />;
 		},
 		enableHiding: false,
 	},
@@ -171,7 +126,55 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
 }
 
 export function DataTable() {
-	const [data, setData] = React.useState(() => leaderBoardData);
+	const { activeWorkspace } = useWorkspace();
+
+	const { data: rawData, isLoading, error } = useReadContract({
+		contract,
+		method: "function getWorkspaceLeaderBoard(uint256) view returns ((address user, uint64 tasksCompleted, uint256 hbarEarned, uint256 erc20Earned, uint256 proposalsVoted)[])",
+		params: [BigInt(activeWorkspace?.id || 0)],
+	});
+
+	// Process the raw data from the contract
+	const processedData = React.useMemo((): ProcessedLeaderBoardEntry[] => {
+		if (!rawData || !Array.isArray(rawData)) {
+			return [];
+		}
+
+		// Process the raw data - each entry should be a tuple/array with the structure from your ABI
+		const formattedData = rawData.map((entry: any, index: number) => {
+			// Handle both array format [user, tasksCompleted, hbarEarned, erc20Earned, proposalsVoted]
+			// and object format {user, tasksCompleted, hbarEarned, erc20Earned, proposalsVoted}
+			let processedEntry: LeaderBoardEntry;
+
+			if (Array.isArray(entry)) {
+				processedEntry = {
+					user: entry[0],
+					tasksCompleted: Number(entry[1]),
+					hbarEarned: Number(entry[2]),
+					erc20Earned: Number(entry[3]),
+					proposalsVoted: Number(entry[4]),
+				};
+			} else {
+				processedEntry = {
+					user: entry.user,
+					tasksCompleted: Number(entry.tasksCompleted),
+					hbarEarned: Number(entry.hbarEarned),
+					erc20Earned: Number(entry.erc20Earned),
+					proposalsVoted: Number(entry.proposalsVoted),
+				};
+			}
+
+			return {
+				...processedEntry,
+				id: index + 1,
+				rank: index + 1,
+			};
+		});
+
+		return formattedData;
+	}, [rawData]);
+
+	const [data, setData] = React.useState<ProcessedLeaderBoardEntry[]>([]);
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -180,10 +183,23 @@ export function DataTable() {
 		pageIndex: 0,
 		pageSize: 10,
 	});
-	const sortableId = React.useId();
-	const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
 
-	const dataIds = React.useMemo<UniqueIdentifier[]>(() => data?.map(({ id }) => id) || [], [data]);
+	// Update local state when processed data changes
+	React.useEffect(() => {
+		setData(processedData);
+	}, [processedData]);
+
+	const sortableId = React.useId();
+	const sensors = useSensors(
+		useSensor(MouseSensor, {}),
+		useSensor(TouchSensor, {}),
+		useSensor(KeyboardSensor, {})
+	);
+
+	const dataIds = React.useMemo<UniqueIdentifier[]>(() =>
+		data.map(({ id }) => id),
+		[data]
+	);
 
 	const table = useReactTable({
 		data,
@@ -210,15 +226,39 @@ export function DataTable() {
 		getFacetedUniqueValues: getFacetedUniqueValues(),
 	});
 
-	function handleDragEnd(event: DragEndEvent) {
+	const handleDragEnd = (event: DragEndEvent) => {
 		const { active, over } = event;
-		if (active && over && active.id !== over.id) {
+		if (active.id !== over?.id) {
 			setData((data) => {
-				const oldIndex = dataIds.indexOf(active.id);
-				const newIndex = dataIds.indexOf(over.id);
+				const oldIndex = data.findIndex(item => item.id === active.id);
+				const newIndex = data.findIndex(item => item.id === over?.id);
 				return arrayMove(data, oldIndex, newIndex);
 			});
 		}
+	};
+
+	// Loading state
+	if (isLoading) {
+		return (
+			<div className="flex items-center justify-center p-8">
+				<div className="text-center">
+					<div className="text-lg font-medium">Loading leaderboard...</div>
+					<div className="text-sm text-muted-foreground">Fetching workspace data</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Error state
+	if (error) {
+		return (
+			<div className="flex items-center justify-center p-8">
+				<div className="text-center">
+					<div className="text-lg font-medium text-red-600">Error loading leaderboard</div>
+					<div className="text-sm text-muted-foreground">{error.message}</div>
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -285,9 +325,9 @@ export function DataTable() {
 					<DndContext
 						collisionDetection={closestCenter}
 						modifiers={[restrictToVerticalAxis]}
-						onDragEnd={handleDragEnd}
 						sensors={sensors}
-						id={sortableId}>
+						id={sortableId}
+						onDragEnd={handleDragEnd}>
 						<Table>
 							<TableHeader className="bg-muted sticky top-0 z-10">
 								{table.getHeaderGroups().map((headerGroup) => (
@@ -408,113 +448,3 @@ export function DataTable() {
 		</Tabs>
 	);
 }
-
-const chartData = [
-	{ month: "January", desktop: 186, mobile: 80 },
-	{ month: "February", desktop: 305, mobile: 200 },
-	{ month: "March", desktop: 237, mobile: 120 },
-	{ month: "April", desktop: 73, mobile: 190 },
-	{ month: "May", desktop: 209, mobile: 130 },
-	{ month: "June", desktop: 214, mobile: 140 },
-];
-
-const chartConfig = {
-	desktop: {
-		label: "Desktop",
-		color: "var(--primary)",
-	},
-	mobile: {
-		label: "Mobile",
-		color: "var(--primary)",
-	},
-} satisfies ChartConfig;
-
-function TableCellViewer({ item, shortenedUser }: { item: z.infer<typeof schema>, shortenedUser: string }) {
-	const isMobile = useIsMobile();
-
-	return (
-		<Drawer direction={isMobile ? "bottom" : "right"}>
-			<DrawerTrigger asChild>
-				<Button
-					variant="link"
-					className="text-foreground w-fit px-0 text-left">
-					<Image src={"/blockie-1.png"} className="rounded-full w-6" alt="user" width={100} height={100} />
-					{shortenedUser}
-				</Button>
-			</DrawerTrigger>
-			<DrawerContent>
-				<DrawerHeader className="gap-1">
-					<DrawerTitle>User: {shortenedUser}</DrawerTitle>
-					<DrawerDescription>Leaderboard details</DrawerDescription>
-				</DrawerHeader>
-				<div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-					{!isMobile && (
-						<>
-							<ChartContainer config={chartConfig}>
-								<AreaChart
-									accessibilityLayer
-									data={chartData}
-									margin={{
-										left: 0,
-										right: 10,
-									}}>
-									<CartesianGrid vertical={false} />
-									<XAxis
-										dataKey="month"
-										tickLine={false}
-										axisLine={false}
-										tickMargin={8}
-										tickFormatter={(value) => value.slice(0, 3)}
-										hide
-									/>
-									<ChartTooltip
-										cursor={false}
-										content={<ChartTooltipContent indicator="dot" />}
-									/>
-									<Area
-										dataKey="mobile"
-										type="natural"
-										fill="var(--color-mobile)"
-										fillOpacity={0.6}
-										stroke="var(--color-mobile)"
-										stackId="a"
-									/>
-									<Area
-										dataKey="desktop"
-										type="natural"
-										fill="var(--color-desktop)"
-										fillOpacity={0.4}
-										stroke="var(--color-desktop)"
-										stackId="a"
-									/>
-								</AreaChart>
-							</ChartContainer>
-							<Separator />
-							<div className="grid gap-2">
-								<div className="flex gap-2 leading-none font-medium">
-									Trending up by 5.2% this month <IconTrendingUp className="size-4" />
-								</div>
-								<div className="text-muted-foreground">Performance overview.</div>
-							</div>
-							<Separator />
-						</>
-					)}
-					<div className="flex flex-col gap-2">
-						<div>Full Address: {item.user}</div>
-						<div>Tasks Completed: {item.tasksCompleted}</div>
-						<div>HBAR Earned: {item.hbarEarned}</div>
-						<div>ERC20 Earned: {item.erc20Earned}</div>
-						<div>Proposals Voted: {item.proposalsVoted}</div>
-					</div>
-				</div>
-				<DrawerFooter>
-					<DrawerClose asChild>
-						<Button variant="outline">Close</Button>
-					</DrawerClose>
-				</DrawerFooter>
-			</DrawerContent>
-		</Drawer>
-	);
-}
-
-// Usage example: <DataTable data={leaderBoardData} />

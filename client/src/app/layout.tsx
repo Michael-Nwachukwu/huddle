@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/context/theme-context";
 import { ThirdwebProvider } from "thirdweb/react";
 import { Toaster } from "sonner";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 
 export const metadata: Metadata = {
 	title: "Huddle",
@@ -24,7 +25,9 @@ export default function RootLayout({
 					<ThemeProvider
 						defaultTheme="system"
 						storageKey="huddle-ui-theme">
-						{children}
+						<WorkspaceProvider>
+							{children}
+						</WorkspaceProvider>
 						<Toaster expand={true} richColors closeButton />
 					</ThemeProvider>
 				</ThirdwebProvider>

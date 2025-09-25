@@ -1,8 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useActiveAccount, useReadContract } from 'thirdweb/react';
 import { contract } from '@/lib/contract';
+
+interface TeamMember {
+  user: string
+  role: string
+}
 
 interface WorkspaceData {
   id: string;
@@ -33,6 +38,8 @@ interface WorkspaceContextType {
   error: string | null;
   switchWorkspace: (workspaceId: string) => void;
   refreshWorkspace: () => void;
+  teamMembers: TeamMember[] | undefined;
+  activeWorkspaceID : number;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -103,6 +110,20 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children }
   });
 
   console.log("active workspace", rawActiveWorkspace);
+
+  const { data : rawTeamMembers } = useReadContract({
+    contract,
+    method: "function getWorkspaceMembers(uint256 _workspaceId) returns ((address, string)[])",
+    params: [BigInt(activeWorkspaceId || 0)],
+  });
+
+  const teamMembers: TeamMember[] | undefined = useMemo(() => {
+    if (!rawTeamMembers) return undefined;
+    return (rawTeamMembers as any[]).map((p) => ({
+      user: p[0],
+      role: p[1]
+    }));
+  }, [rawTeamMembers]);
 
   // Load last active workspace from localStorage when account changes
   useEffect(() => {
@@ -175,6 +196,8 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children }
   const isLoading = isLoadingUserWorkspaces || (activeWorkspaceId && isLoadingActiveWorkspace) || !isInitialized;
   const error = userWorkspacesError?.message || activeWorkspaceError?.message || null;
 
+  const activeWorkspaceID = Number(activeWorkspace?.id || 0);
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -184,6 +207,8 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children }
         error,
         switchWorkspace,
         refreshWorkspace,
+        teamMembers,
+        activeWorkspaceID
       }}
     >
       {children}
