@@ -3,7 +3,6 @@ import { LayoutGrid, List, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import SortPopover from "./sort-popover";
-import { FilterDropdown } from "./filter-dropdown";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 
@@ -23,7 +22,7 @@ interface ViewToolbarProps {
 	onPriorityChange: (priority: string) => void;
 }
 
-export default function ViewToolbar({ viewMode, setViewMode, assignedToMe, setAssignedToMe, sortBy, setSortBy, onStatusChange, onPriorityChange }: ViewToolbarProps) {
+export default function ViewToolbar({ viewMode, setViewMode, assignedToMe, setAssignedToMe, sortBy, setSortBy }: ViewToolbarProps) {
 	return (
 		<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<div className="flex items-center gap-3">

@@ -3,10 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, MoreHorizontal, Search, Timer, ListTodo, CheckCircle, Circle, ArrowRight, ArrowUp, ArrowDown, CirclePlus } from "lucide-react";
+import { ChevronDown, Search, Timer, CirclePlus } from "lucide-react";
 
 import { extendedTasks } from "./extended-tasks";
 import ViewToolbar from "./_components/view-toolbar";
@@ -15,17 +13,17 @@ import GridView from "./_components/grid-view";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 
-const statusIcons = {
-	Pending: ListTodo,
-	"In Progress": Timer,
-	Completed: CheckCircle,
-} as const;
+// const statusIcons = {
+// 	Pending: ListTodo,
+// 	"In Progress": Timer,
+// 	Completed: CheckCircle,
+// } as const;
 
-const priorityIcons = {
-	Low: ArrowDown,
-	Medium: ArrowRight,
-	High: ArrowUp,
-};
+// const priorityIcons = {
+// 	Low: ArrowDown,
+// 	Medium: ArrowRight,
+// 	High: ArrowUp,
+// };
 
 export default function Page() {
 	const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
@@ -92,14 +90,6 @@ export default function Page() {
 				return 0;
 		}
 	});
-
-	const toggleTaskSelection = (taskId: number) => {
-		setSelectedTasks((prev) => (prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]));
-	};
-
-	const toggleAllTasks = () => {
-		setSelectedTasks((prev) => (prev.length === filteredTasks.length ? [] : filteredTasks.map((task) => task.id)));
-	};
 
 	return (
 		<div className="container mx-auto py-10 px-6">

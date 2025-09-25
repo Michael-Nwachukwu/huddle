@@ -11,7 +11,7 @@ interface SortPopoverProps {
 	onSortChange: (sort: SortOption) => void;
 }
 
-export default function SortPopover({ selectedSort, onSortChange }: SortPopoverProps) {
+export default function SortPopover({ onSortChange }: SortPopoverProps) {
 	const sortOptions = [
 		{ value: "newest" as const, label: "Newest to oldest" },
 		{ value: "oldest" as const, label: "Oldest to newest" },
