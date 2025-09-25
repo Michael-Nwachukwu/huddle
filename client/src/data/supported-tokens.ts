@@ -11,7 +11,7 @@ export const supportedAssets: Reward[] = [
         tokenImage: "/icons/usdt.png"
     },
     {
-        symbol: "XFI",
+        symbol: "HBAR",
         address: "0x0000000000000000000000000000000000000000",
         tokenImage: "/icons/xfi.png"
     }

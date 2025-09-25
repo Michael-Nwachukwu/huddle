@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Address from "./Address"
 import { main } from "@/lib/createTopic"
 import {

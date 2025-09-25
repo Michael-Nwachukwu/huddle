@@ -1,6 +1,5 @@
 "use client"
 import ConnectWalletButton from "@/components/ConnectWalletButton";
-import { CreateWorkspaceForm } from "@/components/create-workspace-form"
 import { JoinWorkspaceForm } from "@/components/join-workspace-form";
 import { useTheme } from "@/context/theme-context";
 import Image from "next/image";

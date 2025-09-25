@@ -1,16 +1,10 @@
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from "./ui/drawer";
 import { Button } from "./ui/button";
-import { main } from "@/lib/createTopic";
-import FileUploadForm from "./uploadfile";
 import CreateTaskForm from "./create-task-form";
 
 export function CreateTaskDrawer() {
     const isMobile = useIsMobile();
-
-    async function onSubmit(taskTitle: string) {
-        const topicId = await main(taskTitle);
-    }
 
     return (
         <Drawer direction={isMobile ? "bottom" : "right"}>

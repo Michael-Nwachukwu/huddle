@@ -490,7 +490,6 @@ contract Huddle is ReentrancyGuard {
             );
 
             if (_isPaymentNative) {
-                if (msg.value != _grossReward) revert InsufficientFunds();
                 // Update platform fee tracking
                 ethPlatformFee += platformFee;
             } else {
@@ -498,14 +497,14 @@ contract Huddle is ReentrancyGuard {
                 HuddleLib.validateAddress(_token);
                 if (msg.value > 0) revert InvalidReward();
 
-                // Check token approval and balance
-                uint256 allowance = IERC20(_token).allowance(
-                    msg.sender,
-                    address(this)
-                );
-                uint256 balance = IERC20(_token).balanceOf(msg.sender);
-                if (allowance < _grossReward || balance < _grossReward)
-                    revert InsufficientFunds();
+                // // Check token approval and balance
+                // uint256 allowance = IERC20(_token).allowance(
+                //     msg.sender,
+                //     address(this)
+                // );
+                // uint256 balance = IERC20(_token).balanceOf(msg.sender);
+                // if (allowance < _grossReward || balance < _grossReward)
+                //     revert InsufficientFunds();
 
                 // Update platform fee tracking
                 platformFees[_token] += platformFee;
@@ -1192,20 +1191,6 @@ contract Huddle is ReentrancyGuard {
             workspace.tokenBalance[task.token] -= task.reward;
             IERC20(task.token).safeTransfer(msg.sender, task.reward);
         }
-    }
-
-    function getPlatformFeePercent() external view returns (uint256) {
-        return platformFeePercent;
-    }
-
-    function getPlatformFees(address _token) external view returns (uint256) {
-        return _token == address(0) ? ethPlatformFee : platformFees[_token];
-    }
-
-    function addAcceptedToken(address _token) external onlyOwner {
-        HuddleLib.validateAddress(_token);
-        isTokenAccepted[_token] = true;
-        acceptedTokens.push(_token);
     }
 
     function getTransactionHistory(

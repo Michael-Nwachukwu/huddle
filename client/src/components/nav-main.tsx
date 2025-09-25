@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react";
+import { type Icon } from "@tabler/icons-react";
 import { SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { WorkspaceContextSwitcher } from "./WorkspaceContextSwitcher";
 import { useWorkspace } from "@/contexts/WorkspaceContext";

@@ -209,7 +209,7 @@ export default function FileUploadForm() {
                         </div>
                     </div>
                     <p className="text-xs text-red-400 mt-2">
-                        ⚠️ Store the private key securely - you'll need it to access/modify the file!
+                        ⚠️ Store the private key securely - you&apos;ll need it to access/modify the file!
                     </p>
                 </div>
             )}

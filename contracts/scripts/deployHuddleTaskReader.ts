@@ -11,7 +11,7 @@ async function main() {
 
   // The deployer will also be the owner of our NFT contract
   const HuddleTaskReader = await ethers.getContractFactory("HuddleTaskReader", deployer);
-  const contract = await HuddleTaskReader.deploy("0xbBCd940Cd8094B14496F7948369f2db3cb8bd2D2");
+  const contract = await HuddleTaskReader.deploy("0xEBF42514DeD00D23358706bEB810223744Bc9BD5");
 
   await contract.waitForDeployment();
 

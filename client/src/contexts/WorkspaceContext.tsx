@@ -111,7 +111,7 @@ export const WorkspaceProvider: React.FC<WorkspaceProviderProps> = ({ children }
 
   console.log("active workspace", rawActiveWorkspace);
 
-  const { data : rawTeamMembers, isLoading: isMembersLoading } = useReadContract({
+  const { data : rawTeamMembers } = useReadContract({
     contract,
     method: "function getWorkspaceMembers(uint256 _workspaceId) returns ((address, string)[])",
     params: [BigInt(activeWorkspaceId || 0)],

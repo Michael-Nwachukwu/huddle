@@ -4,20 +4,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
-import { useEffect, useState } from "react"
-import Address from "./Address"
-import { main } from "@/lib/createTopic"
+import { useState } from "react"
 import {
   prepareContractCall,
-  waitForReceipt,
-  prepareEvent,
-  parseEventLogs,
 } from "thirdweb"
 import { useActiveAccount, useReadContract, useSendTransaction } from "thirdweb/react"
 import { toast } from "sonner"
 import { contract } from "@/lib/contract"
-import { client } from "../../client"
-import { hederaTestnet } from "@/utils/chains"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -51,14 +44,14 @@ export function JoinWorkspaceForm({
   const router = useRouter();
 
   // Use the thirdweb hook for sending transactions
-  const { mutateAsync: sendTransaction, isPending: isContractCreating } = useSendTransaction();
+  const { mutateAsync: sendTransaction } = useSendTransaction();
 
   // Get active workspace details
   const {
     data: rawSearchedWorkspace,
-    isLoading: isLoadingActiveWorkspace,
-    error: activeWorkspaceError,
-    refetch: refetchActiveWorkspace,
+    // isLoading: isLoadingActiveWorkspace,
+    // error: activeWorkspaceError,
+    // refetch: refetchActiveWorkspace,
   } = useReadContract({
     contract,
     method: "function workspaces(uint256) view returns (uint256 id, address owner, uint256 nativeBalance, uint256 ercRewardAmountSum, uint256 nativeRewardAmountSum, uint64 taskCounter, uint64 totalActiveTasks, uint64 completedTaskCounter, uint64 inProgressTaskCounter, uint64 overdueTaskCounter, uint64 proposalCounter, string workspaceName, string topicId, address token)",

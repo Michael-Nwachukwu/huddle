@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 
 type Transaction = {
     timestamp: bigint
-    amount: bigint
+    amount: number
     txType: string
 }
 
@@ -17,9 +17,9 @@ const HBAR_TO_USD_RATE = async () => {
         headers: { accept: 'application/json', 'x-cg-demo-api-key': 'CG-xEDfyZh1gVhZ5LFCEuzwUW6M' }
     };
 
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=crossfi-2', options);
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=hedera-hashgraph', options);
     const data = await response.json();
-    return data['crossfi-2'].usd;
+    return data['hedera-hashgraph'].usd;
 };
 
 // Helper function to convert wei to readable format
@@ -133,7 +133,7 @@ export function useUserTransactionHistory(offset: number, limit: number) {
         // Each transaction is an array: [id, workspaceId, publisher, title, description, state, startTime, dueDate, yesVotes, noVotes, abstain]
         return (data as any[]).map((p) => ({
             timestamp: p[0],
-            amount: p[1],
+            amount: formatTokenAmount(p[1]),
             txType: p[2],
         }));
     }, [data]);

@@ -9,7 +9,7 @@ import {
 
 type Transaction = {
   timestamp: bigint
-  amount: bigint
+  amount: number
   txType: string
 }
 
