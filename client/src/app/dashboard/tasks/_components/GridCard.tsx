@@ -10,6 +10,8 @@ import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 interface GridCardProps {
 	item: TypeSafeTaskView;
 	className?: string;
+	setIsOpen: (isOpen: boolean) => void;
+	onViewDetails?: (task: TypeSafeTaskView) => void;
 }
 
 const iconStyles = {
@@ -57,7 +59,7 @@ function getPriorityIcon(priority: number) {
 	if (priority === 1) return ChevronUp;
 	return Timer;
 }
-const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
+const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewDetails }) => {
 	const assignees = Array.isArray(item.assignees) ? (item.assignees as string[]) : [];
 
 	// Use the new hook for multiple assignees
@@ -133,7 +135,13 @@ const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
 						)}
 
 						{/* Show claim rewards badge for current user only when task is completed */}
-						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && <Badge variant="outline" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40">Claim Rewards</Badge>}
+						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && (
+							<Badge
+								variant="outline"
+								className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40">
+								Claim Rewards
+							</Badge>
+						)}
 					</div>
 				</div>
 
@@ -144,7 +152,12 @@ const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
 			</div>
 
 			<div className="mt-auto border-t border-zinc-100 dark:border-zinc-800">
-				<button className={cn("w-full flex items-center justify-center gap-2", "py-2.5 px-3", "text-xs font-medium", "text-zinc-600 dark:text-zinc-400", "hover:text-zinc-900 dark:hover:text-zinc-100", "hover:bg-zinc-100 dark:hover:bg-zinc-800/50", "transition-colors duration-200")}>
+				<button
+					onClick={() => {
+						onViewDetails?.(item);
+						setIsOpen(true);
+					}}
+					className={cn("w-full flex items-center justify-center gap-2", "py-2.5 px-3", "text-xs font-medium", "text-zinc-600 dark:text-zinc-400", "hover:text-zinc-900 dark:hover:text-zinc-100", "hover:bg-zinc-100 dark:hover:bg-zinc-800/50", "transition-colors duration-200")}>
 					View Details
 					<ArrowRight className="w-3.5 h-3.5" />
 				</button>

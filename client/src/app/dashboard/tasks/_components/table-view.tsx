@@ -6,6 +6,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { MoreHorizontal, Timer, ListTodo, CheckCircle, Circle, ArrowRight, ArrowUp, ArrowDown } from "lucide-react";
 import type { filteredTasks as FilteredTask } from "../extended-tasks";
 
+import { TypeSafeTaskView } from "@/utils/types";
+
 const statusIcons = {
 	Pending: ListTodo,
 	"In Progress": Timer,
@@ -20,9 +22,11 @@ const priorityIcons = {
 
 interface TableViewProps {
 	filteredTasks: FilteredTask[];
+	setIsOpen: (isOpen: boolean) => void;
+	setSelectedTask: (task: TypeSafeTaskView) => void;
 }
 
-const TableView: React.FC<TableViewProps> = ({ filteredTasks }) => {
+const TableView: React.FC<TableViewProps> = ({ filteredTasks, setIsOpen, setSelectedTask }) => {
 	return (
 		<div className="rounded-md border">
 			<Table>
@@ -104,9 +108,14 @@ const TableView: React.FC<TableViewProps> = ({ filteredTasks }) => {
 										</Button>
 									</DropdownMenuTrigger>
 									<DropdownMenuContent align="end">
-										<DropdownMenuItem>Edit</DropdownMenuItem>
-										<DropdownMenuItem>Make a copy</DropdownMenuItem>
-										<DropdownMenuItem>Favorite</DropdownMenuItem>
+										<DropdownMenuItem
+											onClick={() => {
+												setSelectedTask(task as unknown as TypeSafeTaskView);
+												setIsOpen(true);
+											}}>
+											View details
+										</DropdownMenuItem>
+										<DropdownMenuItem>Mark as</DropdownMenuItem>
 										<DropdownMenuSeparator />
 										<DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
 									</DropdownMenuContent>
