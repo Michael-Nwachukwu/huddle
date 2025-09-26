@@ -11,13 +11,7 @@ import { prepareContractCall, waitForReceipt } from "thirdweb";
 import { contract } from "@/lib/contract";
 import { client } from "../../../../client";
 import { hederaTestnet } from "@/utils/chains";
-
-// Utility function to validate Ethereum address
-function isValidAddress(address: string): boolean {
-	// Basic Ethereum address validation
-	const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-	return addressRegex.test(address);
-}
+import { isValidAddress } from "@/lib/utils";
 
 const InviteMembers = () => {
 	const { activeWorkspaceID } = useWorkspace();
@@ -26,11 +20,6 @@ const InviteMembers = () => {
 	const [invitees, setInvitees] = useState<string[]>([]);
 	const [currentAddress, setCurrentAddress] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
-
-	const resetForm = () => {
-		// form.reset();
-		// setIsOpen(false);
-	};
 
 	// Add address to invitees list
 	const addInvitee = () => {
@@ -103,7 +92,6 @@ const InviteMembers = () => {
 
 									if (receipt.status === "success") {
 										toast.success("Members invited successfully!", { id: toastId });
-										resetForm();
 									} else {
 										console.log("Transaction failed on blockchain");
 										toast.error("Transaction failed on blockchain", { id: toastId });
@@ -140,7 +128,7 @@ const InviteMembers = () => {
 			const url = `${origin}/workspace/join?workspaceId=${activeWorkspaceID}`;
 
 			await navigator.clipboard.writeText(url);
-			toast.success("Invite link copied to clipboard", { position: "top-right" });
+			toast.success("Invite link copied to clipboard. NOTE: You still need to whitelist the invited address", { position: "top-right" });
 		} catch {
 			// Fallback for environments where clipboard API might fail
 			try {
@@ -175,24 +163,7 @@ const InviteMembers = () => {
 						<DialogTitle>Invite Members</DialogTitle>
 						<DialogDescription>Add members to your workspace</DialogDescription>
 					</DialogHeader>
-					{/* <div className="grid gap-4">
-						<div className="grid gap-3">
-							<Label htmlFor="name-1">Name</Label>
-							<Input
-								id="name-1"
-								name="name"
-								defaultValue="Pedro Duarte"
-							/>
-						</div>
-						<div className="grid gap-3">
-							<Label htmlFor="username-1">Username</Label>
-							<Input
-								id="username-1"
-								name="username"
-								defaultValue="@peduarte"
-							/>
-						</div>
-					</div> */}
+
 					<div className="grid gap-3">
 						<div className="flex items-center">
 							<Label htmlFor="addresses">Invite Users (addresses)</Label>
@@ -249,7 +220,11 @@ const InviteMembers = () => {
 							onClick={handleCopyInvite}>
 							Copy Invite
 						</Button>
-						<Button type="submit" onClick={onSubmit}>Submit</Button>
+						<Button
+							type="submit"
+							onClick={onSubmit}>
+							Submit
+						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</form>

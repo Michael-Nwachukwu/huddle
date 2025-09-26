@@ -1,3 +1,4 @@
+"use client";
 import React, { useMemo, useState } from "react";
 import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Button } from "./ui/button";
@@ -8,10 +9,27 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2 } from "lucide-react";
 import type { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
+import Address from "./Address";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { prepareContractCall, waitForReceipt } from "thirdweb";
+import { toast } from "sonner";
+import { contract } from "@/lib/contract";
+import { client } from "../../client";
+import { hederaTestnet } from "@/utils/chains";
+import { useSendTransaction } from "thirdweb/react";
+import { addTaskAssignee } from "@/lib/tasksABI";
 
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
 	const isMobile = useIsMobile();
+	const { teamMembers } = useWorkspace(); // Access teamMembers from the useWorkspace();
+	const { activeWorkspaceID } = useWorkspace();
+	const { mutateAsync: sendTransaction } = useSendTransaction();
+
 	const [comment, setComment] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
 	const statusLabel = useMemo(() => {
 		if (!task) return "";
@@ -28,6 +46,82 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 			// Handle comment posting logic here
 			setComment("");
 		}
+	};
+
+	// const handleAddMember = (memberAddress: string) => {
+	// 	// Handle adding member to task logic here
+	// 	console.log("Adding member:", memberAddress);
+	// 	setIsAddMemberOpen(false);
+	// };
+
+	const handleAddMember = async (memberAddress: string) => {
+		// e.preventDefault();
+
+		if (isSubmitting) return;
+
+		setIsSubmitting(true);
+		const toastId = toast.loading("Adding Assignee...", {
+			position: "top-right",
+		});
+
+		try {
+			if (!task) {
+				toast.error("No task selected", { id: toastId });
+				return;
+			}
+
+			const transaction = prepareContractCall({
+				contract,
+				method: addTaskAssignee,
+				params: [memberAddress, BigInt(activeWorkspaceID), BigInt(task.id)],
+			} as any);
+
+			await sendTransaction(transaction, {
+				onSuccess: async (result) => {
+					console.log("ThirdWeb reported success:", result);
+
+					// Try to get the actual transaction receipt
+					try {
+						if (result.transactionHash) {
+							console.log("Transaction hash:", result.transactionHash);
+
+							// Wait a bit for the transaction to be mined
+							setTimeout(async () => {
+								try {
+									const receipt = await waitForReceipt({
+										client,
+										chain: hederaTestnet,
+										transactionHash: result.transactionHash,
+									});
+									console.log("Actual transaction receipt:", receipt);
+
+									if (receipt.status === "success") {
+										toast.success("Member added successfully!", { id: toastId });
+										setIsAddMemberOpen(false);
+									} else {
+										console.log("Transaction failed on blockchain");
+										toast.error("Transaction failed on blockchain", { id: toastId });
+									}
+								} catch (receiptError) {
+									console.error("Error getting receipt:", receiptError);
+									toast.error("Transaction status unclear", { id: toastId });
+								}
+							}, 3000); // Wait 3 seconds for mining
+						}
+					} catch (error) {
+						console.error("Error processing transaction result:", error);
+					}
+				},
+			});
+		} catch (error) {
+			toast.error((error as Error).message || "Transaction failed.", {
+				id: toastId,
+				position: "top-right",
+			});
+			toast.dismiss(toastId);
+			setIsSubmitting(false);
+		}
+		setIsAddMemberOpen(false);
 	};
 
 	return (
@@ -96,19 +190,34 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							<User className="h-4 w-4 text-muted-foreground" />
 							<span className="text-muted-foreground text-sm">Assignee</span>
 							<div className="flex items-center gap-2">
-								<Avatar className="h-8 w-8">
-									<AvatarImage
-										src="/api/placeholder/32/32"
-										alt="User"
-									/>
-									<AvatarFallback className="bg-primary text-primary-foreground text-xs">U</AvatarFallback>
-								</Avatar>
-								<Button
-									variant="ghost"
-									size="icon"
-									className="h-8 w-8 border-2 border-dashed border-muted hover:border-border rounded-full">
-									<Plus className="h-4 w-4 text-muted-foreground" />
-								</Button>
+								<Address address={task?.assignees?.[0] ?? ""} />
+								{task?.assignees && task.assignees.length > 1 && <span> + {task.assignees.length ?? 0}</span>}
+								<DropdownMenu
+									open={isAddMemberOpen}
+									onOpenChange={setIsAddMemberOpen}>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 border-2 border-dashed border-muted hover:border-border rounded-full">
+											<Plus className="h-4 w-4 text-muted-foreground" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent
+										align="end"
+										className="w-56">
+										{teamMembers?.map((member, i) => (
+											<DropdownMenuItem
+												key={i}
+												onClick={() => handleAddMember(member.user.toString())}
+												className="cursor-pointer">
+												<div className="flex items-center gap-3">
+													<Address address={member.user} />
+												</div>
+											</DropdownMenuItem>
+										))}
+									</DropdownMenuContent>
+								</DropdownMenu>
 							</div>
 						</div>
 

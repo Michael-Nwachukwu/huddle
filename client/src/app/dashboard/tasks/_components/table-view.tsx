@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Timer, ListTodo, CheckCircle, Circle, ArrowRight, ArrowUp, ArrowDown } from "lucide-react";
-import type { filteredTasks as FilteredTask } from "../extended-tasks";
 
-import { TypeSafeTaskView } from "@/utils/types";
+import { TypeSafeTaskView, NormalizedTask } from "@/utils/types";
 
 const statusIcons = {
 	Pending: ListTodo,
@@ -21,7 +20,7 @@ const priorityIcons = {
 };
 
 interface TableViewProps {
-	filteredTasks: FilteredTask[];
+	filteredTasks: NormalizedTask[];
 	setIsOpen: (isOpen: boolean) => void;
 	setSelectedTask: (task: TypeSafeTaskView) => void;
 }

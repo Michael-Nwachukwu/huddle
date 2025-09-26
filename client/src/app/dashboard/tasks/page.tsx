@@ -17,42 +17,25 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CreateTaskDrawer } from "@/components/create-task-drawer";
 import ViewTaskDrawer from "@/components/view-task-drawer";
 
+import { Status } from "@/utils/types";
+import type { NormalizedTask } from "@/utils/types";
+import { useNormalizedTasks } from "@/lib/utils";
+
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
-
-// const statusIcons = {
-// 	Pending: ListTodo,
-// 	"In Progress": Timer,
-// 	Completed: CheckCircle,
-// } as const;
-
-// const priorityIcons = {
-// 	Low: ArrowDown,
-// 	Medium: ArrowRight,
-// 	High: ArrowUp,
-// };
-
-enum Status {
-	Pending = 0,
-	InProgress = 3,
-	Completed = 1,
-	All = 2,
-}
 
 export default function Page() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [selectedTask, setSelectedTask] = useState<TypeSafeTaskView | null>(null);
-	// const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 	const [assignedToMe, setAssignedToMe] = useState(false);
 	const [sortBy, setSortBy] = useState<SortOption>("newest");
 	const [statusFilter, setStatusFilter] = useState<Status>(Status.Pending);
 	const [priorityFilter, setPriorityFilter] = useState<"All" | "Low" | "Medium" | "High">("All");
-	// const [assignedToMe, setAssignedToMe] = useState(false);
 
 	const { activeWorkspaceID } = useWorkspace();
 
-	const { tasks } = useFetchTasks(1, 0, 12, assignedToMe, statusFilter);
+	const { tasks } = useFetchTasks(activeWorkspaceID, 0, 12, assignedToMe, statusFilter);
 	console.log("tasks", tasks);
 
 	const handleStatusChange = (status: string | Status) => {
@@ -88,40 +71,7 @@ export default function Page() {
 		}
 	};
 
-	// Helper function to convert wei to readable format
-	function formatTokenAmount(amount: bigint | undefined, decimals: number = 18): number {
-		if (!amount) return 0;
-		return Number(amount) / Math.pow(10, decimals);
-	}
-
-	type NormalizedTask = TypeSafeTaskView & { _statusLabel: string; _priorityLabel: string };
-
-	const normalizedTasks: NormalizedTask[] = tasks.map((task) => {
-		const statusLabel = task.taskState === 0 ? "Pending" : task.taskState === 3 ? "In Progress" : "Completed";
-		const priorityLabel = task.priority === 0 ? "Low" : task.priority === 1 ? "Medium" : "High";
-		return {
-			// coerce bigint fields for UI typing compatibility
-			id: Number(task.id),
-			workspaceId: Number(task.workspaceId),
-			isRewarded: task.isRewarded,
-			isPaymentNative: task.isPaymentNative,
-			taskState: task.taskState,
-			reward: Number(formatTokenAmount(task.reward)),
-			grossReward: Number(task.grossReward),
-			token: task.token,
-			title: task.title,
-			description: task.description,
-			startTime: Number(task.startTime),
-			dueDate: Number(task.dueDate),
-			topicId: task.topicId,
-			fileId: task.fileId,
-			priority: task.priority,
-			assignees: task.assignees,
-			assigneeCount: Number(task.assigneeCount ?? 0),
-			_statusLabel: statusLabel,
-			_priorityLabel: priorityLabel,
-		};
-	});
+	const normalizedTasks = useNormalizedTasks(tasks);
 
 	const filteredTasks = normalizedTasks.filter((task) => {
 		const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -224,7 +174,6 @@ export default function Page() {
 						<CreateTaskDrawer />
 					</div>
 
-					{/* <div className="flex items-center justify-between"> */}
 					<ViewToolbar
 						viewMode={viewMode}
 						setViewMode={setViewMode}
@@ -235,10 +184,8 @@ export default function Page() {
 						onStatusChange={handleStatusChange}
 						onPriorityChange={handlePriorityChange}
 					/>
-					{/* </div> */}
 
 					{/* table */}
-					{/* <TableView filteredTasks={sortedTasks} /> */}
 					{viewMode === "list" ? (
 						<TableView
 							filteredTasks={sortedTasks}

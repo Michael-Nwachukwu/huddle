@@ -1,3 +1,10 @@
+export enum Status {
+	Pending = 0,
+	InProgress = 3,
+	Completed = 1,
+	All = 2,
+}
+
 export interface TypeSafeTaskView {
 	id: number;
 	workspaceId: number;

@@ -181,3 +181,27 @@ export const hasUserClaimedABI = {
 	stateMutability: "view",
 	type: "function",
 } as const;
+
+export const addTaskAssignee = {
+	inputs: [
+		{
+			internalType: "address",
+			name: "_user",
+			type: "address",
+		},
+		{
+			internalType: "uint256",
+			name: "_workspaceId",
+			type: "uint256",
+		},
+		{
+			internalType: "uint256",
+			name: "_taskId",
+			type: "uint256",
+		},
+	],
+	name: "addTaskAssignee",
+	outputs: [],
+	stateMutability: "nonpayable",
+	type: "function",
+} as const;

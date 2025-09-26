@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { TypeSafeTaskView } from "@/utils/types";
+import { NormalizedTask, TypeSafeTaskView } from "@/utils/types";
 import { useMemo } from "react";
 import { TaskView } from "@/hooks/use-fetch-tasks";
 
@@ -8,11 +8,18 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+// Utility function to validate Ethereum address
+export function isValidAddress(address: string): boolean {
+	// Basic Ethereum address validation
+	const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+	return addressRegex.test(address);
+}
+
 export const formatHederaTokenAmount = (amount?: bigint, decimals: number = 18): number => {
 	if (!amount) return 0;
 	return Number(amount) / Math.pow(10, decimals);
 };
-export function useNormalizedTasks(tasks: TaskView[]): TypeSafeTaskView[] {
+export function useNormalizedTasks(tasks: TaskView[]): NormalizedTask[] {
 	return useMemo(() => {
 		return tasks.map((task) => {
 			const statusLabel = task.taskState === 0 ? "Pending" : task.taskState === 3 ? "In Progress" : "Completed";

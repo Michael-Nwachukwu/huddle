@@ -1,9 +1,9 @@
 import React from "react";
 import GridCard from "./GridCard";
-import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
+import { NormalizedTask, TypeSafeTaskView } from "@/utils/types";
 
 interface GridViewProps {
-	filteredTasks: TypeSafeTaskView[];
+	filteredTasks: NormalizedTask[];
 	setIsOpen: (isOpen: boolean) => void;
 	setSelectedTask: (task: TypeSafeTaskView) => void;
 }
