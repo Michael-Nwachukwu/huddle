@@ -7,12 +7,7 @@ import { TaskView } from "@/hooks/use-fetch-tasks";
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
-// Helper function to convert wei to readable format
-// export function formatTokenAmount(amount: bigint | number | undefined, decimals: number = 18): number {
-// 	if (amount === undefined || amount === null) return 0;
-// 	const numericAmount = typeof amount === "bigint" ? Number(amount) : amount;
-// 	return numericAmount / Math.pow(10, decimals);
-// }
+
 const formatTokenAmount = (amount?: bigint, decimals: number = 18): number => {
 	if (!amount) return 0;
 	return Number(amount) / Math.pow(10, decimals);

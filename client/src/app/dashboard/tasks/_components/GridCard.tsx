@@ -124,15 +124,16 @@ const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
 					<span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{amountText ?? "No reward"}</span>
 					{amountText && <span className="text-xs text-zinc-600 dark:text-zinc-400">reward</span>}
 					<div className="ml-auto flex gap-2">
+						{!isCurrentUserAssignee && status === "completed" && <Badge variant="outline">Ready to Claim</Badge>}
 						{/* Show claimed status if there are assignees and rewards */}
-						{claimData.totalAssignees > 0 && amountText && (
+						{claimData.totalAssignees > 0 && amountText && !isCurrentUserAssignee && claimData.claimedCount > 0 && (
 							<Badge>
 								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
 							</Badge>
 						)}
 
-						{/* Show claim rewards badge for current user if they're an assignee and haven't claimed */}
-						{isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && <Badge variant="outline">Claim Rewards</Badge>}
+						{/* Show claim rewards badge for current user only when task is completed */}
+						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && <Badge variant="outline" className="bg-emerald-100 dark:bg-emerald-900/30">Claim Rewards</Badge>}
 					</div>
 				</div>
 
