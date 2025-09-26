@@ -31,18 +31,18 @@ export default function ViewToolbar({ viewMode, setViewMode, assignedToMe, setAs
 					<Button
 						variant="outline"
 						size="sm"
-						className={cn("h-8 px-2.5 border-none", viewMode === "list" ? "text-[#a4c12e]" : "text-white")}
-						onClick={() => setViewMode("list")}>
-						<List className="w-4 h-4" />
-						<span className="sr-only">List view</span>
-					</Button>
-					<Button
-						variant="outline"
-						size="sm"
 						className={cn("h-8 px-2.5 border-none", viewMode === "grid" ? "text-[#a4c12e]" : "")}
 						onClick={() => setViewMode("grid")}>
 						<LayoutGrid className="w-4 h-4" />
 						<span className="sr-only">Grid view</span>
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						className={cn("h-8 px-2.5 border-none", viewMode === "list" ? "text-[#a4c12e]" : "text-white")}
+						onClick={() => setViewMode("list")}>
+						<List className="w-4 h-4" />
+						<span className="sr-only">List view</span>
 					</Button>
 				</div>
 			</div>

@@ -34,7 +34,12 @@ export default function LoginPage() {
 					</Link>
 					<ConnectWalletButton />
 				</div>
-				<Suspense fallback={<div>Loading...</div>}>
+				<Suspense
+					fallback={
+						<div className="flex items-center justify-center p-8">
+							<div className="text-muted-foreground">Loading workspace form...</div>
+						</div>
+					}>
 					<JoinWorkspaceForm />
 				</Suspense>
 			</div>

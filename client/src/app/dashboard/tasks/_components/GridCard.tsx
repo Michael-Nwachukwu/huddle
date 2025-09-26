@@ -2,10 +2,13 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Calendar, ArrowRight, CheckCircle2, Timer, AlertCircle, ChevronUp, ChevronsUp } from "lucide-react";
-import type { filteredTasks } from "../extended-tasks";
+import Image from "next/image";
+import { useMultipleAssigneesClaimStatus } from "@/hooks/use-fetch-tasks";
+import { Badge } from "@/components/ui/badge";
+import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 
 interface GridCardProps {
-	item: filteredTasks;
+	item: TypeSafeTaskView;
 	className?: string;
 }
 
@@ -55,12 +58,24 @@ function getPriorityIcon(priority: number) {
 	return Timer;
 }
 const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
+	const assignees = Array.isArray(item.assignees) ? (item.assignees as string[]) : [];
+
+	// Use the new hook for multiple assignees
+	const claimData = useMultipleAssigneesClaimStatus(item.workspaceId, item.id, assignees);
+
 	const status: StatusKey = getStatusFromState(item.taskState);
 	const PriorityIcon = getPriorityIcon(item.priority);
 	const priorityStyle = iconStyles[getPriorityStyle(item.priority)];
-	const formattedDate = `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+	const formattedDate = `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`; // `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 	const amountText = item.isRewarded ? `${item.reward}${item.isPaymentNative ? "" : ""}` : undefined;
 	const progressPercent = status === "in-progress" ? 50 : status === "completed" ? 100 : 0;
+
+	// Get current user's claim status
+	const currentUserStatus = claimData.getCurrentUserStatus();
+	const isCurrentUserAssignee = !!currentUserStatus;
+	const hasCurrentUserClaimed = currentUserStatus?.hasClaimed || false;
+
+	console.log("claim data", claimData);
 	return (
 		<Card className={cn("flex flex-col", "w-full h-full", "@container/card", "rounded-xl", "border border-zinc-100 dark:border-zinc-800", "hover:border-zinc-200 dark:hover:border-zinc-700", "transition-all duration-200", "shadow-sm backdrop-blur-xl", "p-0", className)}>
 			<div className="p-4 space-y-3">
@@ -97,8 +112,28 @@ const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
 
 				{/* Reward */}
 				<div className="flex items-center gap-1.5">
+					{amountText && (
+						<Image
+							className=" mr-1.5"
+							src={item.isPaymentNative ? "/hbar.png" : "/usdt.png"}
+							alt="reward amount"
+							width={16}
+							height={16}
+						/>
+					)}
 					<span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{amountText ?? "No reward"}</span>
 					{amountText && <span className="text-xs text-zinc-600 dark:text-zinc-400">reward</span>}
+					<div className="ml-auto flex gap-2">
+						{/* Show claimed status if there are assignees and rewards */}
+						{claimData.totalAssignees > 0 && amountText && (
+							<Badge>
+								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
+							</Badge>
+						)}
+
+						{/* Show claim rewards badge for current user if they're an assignee and haven't claimed */}
+						{isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && <Badge variant="outline">Claim Rewards</Badge>}
+					</div>
 				</div>
 
 				<div className="flex items-center text-xs text-zinc-600 dark:text-zinc-400">

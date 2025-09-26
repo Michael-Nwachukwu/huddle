@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -56,7 +57,21 @@ const TableView: React.FC<TableViewProps> = ({ filteredTasks }) => {
 									<span className="truncate font-medium">{task.title}</span>
 								</div>
 							</TableCell>
-							<TableCell>{task.reward || "Not Rewarded"}</TableCell>
+							<TableCell>
+								{" "}
+								<div className="flex gap-2">
+									{task.reward && (
+										<Image
+											className=" mr-1.5"
+											src={task.isPaymentNative ? "/hbar.png" : "/usdt.png"}
+											alt="reward amount"
+											width={16}
+											height={16}
+										/>
+									)}
+									{task.reward || "Not Rewarded"}
+								</div>
+							</TableCell>
 							<TableCell>
 								{(() => {
 									const IconComponent = statusIcons[task._statusLabel as keyof typeof statusIcons] || Circle;

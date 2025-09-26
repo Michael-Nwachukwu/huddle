@@ -1,9 +1,10 @@
 import React from "react";
 import GridCard from "./GridCard";
 import type { filteredTasks as FilteredTask } from "../extended-tasks";
+import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 
 interface GridViewProps {
-	filteredTasks: FilteredTask[];
+	filteredTasks: TypeSafeTaskView[];
 }
 
 const GridView: React.FC<GridViewProps> = ({ filteredTasks }) => {

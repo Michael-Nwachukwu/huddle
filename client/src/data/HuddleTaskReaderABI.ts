@@ -2,26 +2,33 @@ export const abi = [
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "_workspaceId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_taskId",
-                "type": "uint256"
+                "internalType": "address",
+                "name": "_huddleContract",
+                "type": "address"
             }
         ],
-        "name": "getTaskAssignees",
-        "outputs": [
-            {
-                "internalType": "address[]",
-                "name": "",
-                "type": "address[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidHuddleContract",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "InvalidPaginationParams",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "NotWorkspaceMember",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "WorkspaceNotFound",
+        "type": "error"
     },
     {
         "inputs": [
@@ -29,45 +36,143 @@ export const abi = [
                 "internalType": "address",
                 "name": "_user",
                 "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_offset",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_limit",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "_stateFilter",
+                "type": "uint8"
             }
         ],
-        "name": "getUserWorkspaces",
+        "name": "getUserTasks",
         "outputs": [
             {
                 "components": [
                     {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "id",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "workspaceId",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "bool",
+                                "name": "isRewarded",
+                                "type": "bool"
+                            },
+                            {
+                                "internalType": "bool",
+                                "name": "isPaymentNative",
+                                "type": "bool"
+                            },
+                            {
+                                "internalType": "enum IHuddle.TaskState",
+                                "name": "taskState",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "reward",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "grossReward",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "token",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "title",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "description",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "startTime",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "dueDate",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "topicId",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "fileId",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "address[]",
+                                "name": "assignees",
+                                "type": "address[]"
+                            },
+                            {
+                                "internalType": "enum IHuddle.TaskPriority",
+                                "name": "priority",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "assigneeCount",
+                                "type": "uint256"
+                            }
+                        ],
+                        "internalType": "struct HuddleTaskReader.TaskView[]",
+                        "name": "tasks",
+                        "type": "tuple[]"
+                    },
+                    {
                         "internalType": "uint256",
-                        "name": "workspaceId",
+                        "name": "totalTasks",
                         "type": "uint256"
                     },
                     {
-                        "internalType": "string",
-                        "name": "name",
-                        "type": "string"
+                        "internalType": "uint256",
+                        "name": "totalPages",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "hasNextPage",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "hasPreviousPage",
+                        "type": "bool"
                     }
                 ],
-                "internalType": "struct IHuddle.WorkspaceContextData[]",
+                "internalType": "struct HuddleTaskReader.TasksResponse",
                 "name": "",
-                "type": "tuple[]"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_workspaceId",
-                "type": "uint256"
-            }
-        ],
-        "name": "getWorkspaceToken",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
+                "type": "tuple"
             }
         ],
         "stateMutability": "view",
@@ -82,110 +187,158 @@ export const abi = [
             },
             {
                 "internalType": "uint256",
-                "name": "_taskId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "_user",
-                "type": "address"
-            }
-        ],
-        "name": "isUserAssignedToTask",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_workspaceId",
+                "name": "_offset",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "_taskId",
-                "type": "uint256"
-            }
-        ],
-        "name": "tasks",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "workspaceId",
+                "name": "_limit",
                 "type": "uint256"
             },
             {
                 "internalType": "bool",
-                "name": "isRewarded",
+                "name": "_assignedToMe",
                 "type": "bool"
             },
             {
-                "internalType": "bool",
-                "name": "isPaymentNative",
-                "type": "bool"
-            },
-            {
-                "internalType": "enum IHuddle.TaskState",
-                "name": "taskState",
+                "internalType": "uint8",
+                "name": "_stateFilter",
                 "type": "uint8"
-            },
+            }
+        ],
+        "name": "getWorkspaceTasks",
+        "outputs": [
             {
-                "internalType": "uint256",
-                "name": "reward",
-                "type": "uint256"
-            },
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "id",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "workspaceId",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "bool",
+                                "name": "isRewarded",
+                                "type": "bool"
+                            },
+                            {
+                                "internalType": "bool",
+                                "name": "isPaymentNative",
+                                "type": "bool"
+                            },
+                            {
+                                "internalType": "enum IHuddle.TaskState",
+                                "name": "taskState",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "reward",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "grossReward",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "token",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "title",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "description",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "startTime",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "dueDate",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "topicId",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "fileId",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "address[]",
+                                "name": "assignees",
+                                "type": "address[]"
+                            },
+                            {
+                                "internalType": "enum IHuddle.TaskPriority",
+                                "name": "priority",
+                                "type": "uint8"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "assigneeCount",
+                                "type": "uint256"
+                            }
+                        ],
+                        "internalType": "struct HuddleTaskReader.TaskView[]",
+                        "name": "tasks",
+                        "type": "tuple[]"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "totalTasks",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "totalPages",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "hasNextPage",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "hasPreviousPage",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct HuddleTaskReader.TasksResponse",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "huddleContract",
+        "outputs": [
             {
-                "internalType": "uint256",
-                "name": "grossReward",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "token",
+                "internalType": "contract IHuddle",
+                "name": "",
                 "type": "address"
-            },
-            {
-                "internalType": "string",
-                "name": "title",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "description",
-                "type": "string"
-            },
-            {
-                "internalType": "uint256",
-                "name": "startTime",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "dueDate",
-                "type": "uint256"
-            },
-            {
-                "internalType": "string",
-                "name": "topicId",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "fileId",
-                "type": "string"
             }
         ],
         "stateMutability": "view",
@@ -194,76 +347,29 @@ export const abi = [
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "_workspaceId",
-                "type": "uint256"
+                "internalType": "string",
+                "name": "_name",
+                "type": "string"
             }
         ],
-        "name": "workspaces",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "id",
-                "type": "uint256"
-            },
+        "name": "setUserName",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
             {
                 "internalType": "address",
-                "name": "owner",
+                "name": "",
                 "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "nativeBalance",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "ercRewardAmountSum",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "nativeRewardAmountSum",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint64",
-                "name": "taskCounter",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "totalActiveTasks",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "completedTaskCounter",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "inProgressTaskCounter",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "overdueTaskCounter",
-                "type": "uint64"
-            },
-            {
-                "internalType": "uint64",
-                "name": "proposalCounter",
-                "type": "uint64"
-            },
+            }
+        ],
+        "name": "usernames",
+        "outputs": [
             {
                 "internalType": "string",
-                "name": "workspaceName",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "topicId",
+                "name": "",
                 "type": "string"
             }
         ],

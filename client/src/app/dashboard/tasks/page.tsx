@@ -6,10 +6,15 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Search, Timer, CirclePlus } from "lucide-react";
 
-import { extendedTasks } from "./extended-tasks";
+// import { extendedTasks } from "./extended-tasks"; // not used
 import ViewToolbar from "./_components/view-toolbar";
 import TableView from "./_components/table-view";
 import GridView from "./_components/grid-view";
+
+import { useFetchTasks } from "@/hooks/use-fetch-tasks";
+import type { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { CreateTaskDrawer } from "@/components/create-task-drawer";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 
@@ -25,18 +30,52 @@ type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 // 	High: ArrowUp,
 // };
 
+enum Status {
+	Pending = 0,
+	InProgress = 3,
+	Completed = 1,
+	All = 2,
+}
+
 export default function Page() {
 	const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+	const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 	const [assignedToMe, setAssignedToMe] = useState(false);
 	const [sortBy, setSortBy] = useState<SortOption>("newest");
-	const [statusFilter, setStatusFilter] = useState<"All" | "Pending" | "In Progress" | "Completed">("All");
+	const [statusFilter, setStatusFilter] = useState<Status>(Status.Pending);
 	const [priorityFilter, setPriorityFilter] = useState<"All" | "Low" | "Medium" | "High">("All");
+	// const [assignedToMe, setAssignedToMe] = useState(false);
 
-	const handleStatusChange = (status: string) => {
-		if (status === "All" || status === "Pending" || status === "In Progress" || status === "Completed") {
-			setStatusFilter(status);
+	const { activeWorkspaceID } = useWorkspace();
+
+	const { tasks } = useFetchTasks(1, 0, 12, assignedToMe, statusFilter);
+	console.log("tasks", tasks);
+
+	const handleStatusChange = (status: string | Status) => {
+		let nextStatus: Status | null = null;
+		if (typeof status === "number") {
+			nextStatus = status;
+		} else {
+			switch (status) {
+				case "All":
+					nextStatus = Status.All;
+					break;
+				case "Pending":
+					nextStatus = Status.Pending;
+					break;
+				case "In Progress":
+					nextStatus = Status.InProgress;
+					break;
+				case "Completed":
+					nextStatus = Status.Completed;
+					break;
+				default:
+					nextStatus = Status.All;
+			}
+		}
+		if (nextStatus !== null) {
+			setStatusFilter(nextStatus);
 		}
 	};
 
@@ -46,11 +85,36 @@ export default function Page() {
 		}
 	};
 
-	const normalizedTasks = extendedTasks.map((task) => {
-		const statusLabel = task.taskState === 0 ? "Pending" : task.taskState === 1 ? "In Progress" : "Completed";
+	// Helper function to convert wei to readable format
+	function formatTokenAmount(amount: bigint | undefined, decimals: number = 18): number {
+		if (!amount) return 0;
+		return Number(amount) / Math.pow(10, decimals);
+	}
+
+	type NormalizedTask = TypeSafeTaskView & { _statusLabel: string; _priorityLabel: string };
+
+	const normalizedTasks: NormalizedTask[] = tasks.map((task) => {
+		const statusLabel = task.taskState === 0 ? "Pending" : task.taskState === 3 ? "In Progress" : "Completed";
 		const priorityLabel = task.priority === 0 ? "Low" : task.priority === 1 ? "Medium" : "High";
 		return {
-			...task,
+			// coerce bigint fields for UI typing compatibility
+			id: Number(task.id),
+			workspaceId: Number(task.workspaceId),
+			isRewarded: task.isRewarded,
+			isPaymentNative: task.isPaymentNative,
+			taskState: task.taskState,
+			reward: Number(formatTokenAmount(task.reward)),
+			grossReward: Number(task.grossReward),
+			token: task.token,
+			title: task.title,
+			description: task.description,
+			startTime: Number(task.startTime),
+			dueDate: Number(task.dueDate),
+			topicId: task.topicId,
+			fileId: task.fileId,
+			priority: task.priority,
+			assignees: task.assignees,
+			assigneeCount: Number(task.assigneeCount ?? 0),
 			_statusLabel: statusLabel,
 			_priorityLabel: priorityLabel,
 		};
@@ -58,28 +122,28 @@ export default function Page() {
 
 	const filteredTasks = normalizedTasks.filter((task) => {
 		const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
-		const matchesStatus = statusFilter === "All" ? true : task._statusLabel === statusFilter;
+		const matchesStatus = statusFilter === Status.All ? true : task.taskState === statusFilter;
 		const matchesPriority = priorityFilter === "All" ? true : task._priorityLabel === priorityFilter;
 		return matchesSearch && matchesStatus && matchesPriority;
 	});
 
-	const sortedTasks = [...filteredTasks].sort((a, b) => {
-		// Stable tie-breaker by id to avoid jitter
-		const tieBreakAsc = a.id - b.id;
-		const tieBreakDesc = b.id - a.id;
-		const lastUpdatedA = Math.max(a.startTime ?? 0, a.dueDate ?? 0);
-		const lastUpdatedB = Math.max(b.startTime ?? 0, b.dueDate ?? 0);
+	const sortedTasks: NormalizedTask[] = [...filteredTasks].sort((a, b) => {
+		// Stable tie-breaker by id to avoid jitter (normalize to number)
+		const tieBreakAsc = Number((a.id as unknown as bigint) - (b.id as unknown as bigint));
+		const tieBreakDesc = Number((b.id as unknown as bigint) - (a.id as unknown as bigint));
+		const lastUpdatedA = Math.max(Number(a.startTime ?? 0), Number(a.dueDate ?? 0));
+		const lastUpdatedB = Math.max(Number(b.startTime ?? 0), Number(b.dueDate ?? 0));
 		switch (sortBy) {
 			case "newest": {
-				if (b.startTime !== a.startTime) return b.startTime - a.startTime; // newest first
+				if (b.startTime !== a.startTime) return Number(b.startTime) - Number(a.startTime); // newest first
 				return tieBreakDesc;
 			}
 			case "oldest": {
-				if (a.startTime !== b.startTime) return a.startTime - b.startTime; // oldest first
+				if (a.startTime !== b.startTime) return Number(a.startTime) - Number(b.startTime); // oldest first
 				return tieBreakAsc;
 			}
 			case "due-date": {
-				if (a.dueDate !== b.dueDate) return a.dueDate - b.dueDate; // soonest due first
+				if (a.dueDate !== b.dueDate) return Number(a.dueDate) - Number(b.dueDate); // soonest due first
 				return tieBreakAsc;
 			}
 			case "last-updated": {
@@ -123,13 +187,13 @@ export default function Page() {
 							<DropdownMenuContent align="end">
 								<DropdownMenuLabel>Filter by status</DropdownMenuLabel>
 								<DropdownMenuSeparator />
-								<DropdownMenuItem onClick={() => handleStatusChange("All")}>All</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleStatusChange("Pending")}>Pending</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleStatusChange("In Progress")}>
+								<DropdownMenuItem onClick={() => handleStatusChange(Status.All)}>All</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => handleStatusChange(Status.Pending)}>Pending</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => handleStatusChange(Status.InProgress)}>
 									<Timer />
 									In Progress
 								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleStatusChange("Completed")}>Completed</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => handleStatusChange(Status.Completed)}>Completed</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
 						<DropdownMenu>
@@ -152,7 +216,8 @@ export default function Page() {
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</div>
-					<Button className="w-full sm:w-auto">Add Task</Button>
+					{/* <Button className="w-full sm:w-auto">Add Task</Button> */}
+					<CreateTaskDrawer />
 				</div>
 
 				{/* <div className="flex items-center justify-between"> */}
