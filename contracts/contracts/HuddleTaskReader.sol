@@ -274,9 +274,6 @@ contract HuddleTaskReader {
     function _validateWorkspaceAccess(uint256 _workspaceId) internal view {
         (uint256 id, , , , , , , , , , , , ) = huddleContract.workspaces(_workspaceId);
         if (id == 0) revert WorkspaceNotFound();
-        
-        address token = huddleContract.getWorkspaceToken(_workspaceId);
-        if (IERC721(token).balanceOf(msg.sender) == 0) revert NotWorkspaceMember();
     }
     
     function _processWorkspaceTasks(
