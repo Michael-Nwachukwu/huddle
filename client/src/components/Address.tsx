@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { useHederaAccount } from '@/hooks/use-hedera-account';
 import { useActiveAccount, useReadContract } from 'thirdweb/react';
-import { contract } from '@/lib/contract';
+import { contract } from '@/lib/huddle-taskReader-contract';
 
 interface AddressProps {
     address: string;
@@ -17,7 +17,7 @@ const Address: React.FC<AddressProps> = ({ address }) => {
         // isLoading: isLoadingUsername,
         // error: usernameError,
     } = useReadContract({
-        contract,
+        contract: contract,
         method:
             "function usernames(address) view returns (string)",
         params: [account?.address || "0x0"],
