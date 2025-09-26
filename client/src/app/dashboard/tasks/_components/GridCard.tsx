@@ -133,7 +133,7 @@ const GridCard: React.FC<GridCardProps> = ({ item, className }) => {
 						)}
 
 						{/* Show claim rewards badge for current user only when task is completed */}
-						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && <Badge variant="outline" className="bg-emerald-100 dark:bg-emerald-900/30">Claim Rewards</Badge>}
+						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && <Badge variant="outline" className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40">Claim Rewards</Badge>}
 					</div>
 				</div>
 
