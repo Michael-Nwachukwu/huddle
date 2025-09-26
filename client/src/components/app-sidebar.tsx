@@ -10,78 +10,79 @@ import { NavUser } from "@/components/nav-user";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import Image from "next/image";
 import { useTheme } from "@/context/theme-context";
-
-const data = {
-	user: {
-		name: "shadcn",
-		email: "m@example.com",
-		avatar: "/avatars/shadcn.jpg",
-	},
-	navMain: [
-		{
-			title: "Dashboard",
-			url: "/dashboard",
-			icon: IconDashboard,
-		},
-		{
-			title: "Huddle",
-			url: "/",
-			icon: IconListDetails,
-		},
-		{
-			title: "Tasks",
-			url: "/dashboard/tasks",
-			icon: IconChartBar,
-		},
-		{
-			title: "Governance",
-			url: "#",
-			icon: IconFolder,
-		},
-		{
-			title: "Team",
-			url: "#",
-			icon: IconUsers,
-		},
-	],
-	navSecondary: [
-		{
-			title: "Settings",
-			url: "#",
-			icon: IconSettings,
-		},
-		{
-			title: "Get Help",
-			url: "#",
-			icon: IconHelp,
-		},
-		{
-			title: "Search",
-			url: "#",
-			icon: IconSearch,
-		},
-	],
-	tools: [
-		{
-			name: "Notepad",
-			url: "#",
-			icon: IconDatabase,
-		},
-		{
-			name: "Huddle AI",
-			url: "#",
-			icon: IconReport,
-		},
-		{
-			name: "Agent (coming soon)",
-			url: "#",
-			icon: IconFileWord,
-		},
-	],
-};
+import { useActiveAccount } from "thirdweb/react";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { theme } = useTheme();
+	const account = useActiveAccount();
+	const data = {
+		user: {
+			name: "Kitchens",
+			address: account?.address || "",
+			avatar: "/avatars/shadcn.jpg",
+		},
+		navMain: [
+			{
+				title: "Dashboard",
+				url: "/dashboard",
+				icon: IconDashboard,
+			},
+			{
+				title: "Huddle",
+				url: "#",
+				icon: IconListDetails,
+			},
+			{
+				title: "Tasks",
+				url: "#",
+				icon: IconChartBar,
+			},
+			{
+				title: "Governance",
+				url: "/dashboard/governance",
+				icon: IconFolder,
+			},
+			{
+				title: "Team",
+				url: "#",
+				icon: IconUsers,
+			},
+		],
+		navSecondary: [
+			{
+				title: "Settings",
+				url: "#",
+				icon: IconSettings,
+			},
+			{
+				title: "Get Help",
+				url: "#",
+				icon: IconHelp,
+			},
+			{
+				title: "Search",
+				url: "#",
+				icon: IconSearch,
+			},
+		],
+		tools: [
+			{
+				name: "Notepad",
+				url: "#",
+				icon: IconDatabase,
+			},
+			{
+				name: "Huddle AI",
+				url: "#",
+				icon: IconReport,
+			},
+			{
+				name: "Agent (coming soon)",
+				url: "#",
+				icon: IconFileWord,
+			},
+		],
+	};
 	return (
 		<Sidebar
 			collapsible="offcanvas"
@@ -120,7 +121,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				/>
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={data.user} />
+				<NavUser user={data.user || {}} />
 			</SidebarFooter>
 		</Sidebar>
 	);
