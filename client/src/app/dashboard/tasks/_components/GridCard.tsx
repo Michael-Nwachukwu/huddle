@@ -43,7 +43,8 @@ type StatusKey = keyof typeof statusConfig;
 function getStatusFromState(taskState: number): StatusKey {
 	// 0: pending, 1: in-progress, 2: completed, 3: completed (closed)
 	if (taskState === 0) return "pending";
-	if (taskState === 1) return "in-progress";
+	if (taskState === 3) return "in-progress";
+	// if (taskState === 1) return "completed";
 	return "completed";
 }
 

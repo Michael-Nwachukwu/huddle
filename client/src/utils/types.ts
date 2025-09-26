@@ -2,7 +2,7 @@ export enum Status {
 	Pending = 0,
 	InProgress = 3,
 	Completed = 1,
-	All = 2,
+	All = 255,
 }
 
 export interface TypeSafeTaskView {

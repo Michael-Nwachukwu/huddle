@@ -205,3 +205,27 @@ export const addTaskAssignee = {
 	stateMutability: "nonpayable",
 	type: "function",
 } as const;
+
+export const markAsABI = {
+	inputs: [
+		{
+			internalType: "uint256",
+			name: "_workspaceId",
+			type: "uint256",
+		},
+		{
+			internalType: "uint256",
+			name: "_taskId",
+			type: "uint256",
+		},
+		{
+			internalType: "enum Huddle.TaskState",
+			name: "stateUpdate",
+			type: "uint8",
+		},
+	],
+	name: "markAs",
+	outputs: [],
+	stateMutability: "nonpayable",
+	type: "function",
+} as const;
