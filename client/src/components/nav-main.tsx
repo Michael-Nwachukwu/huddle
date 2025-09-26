@@ -4,6 +4,8 @@ import { type Icon } from "@tabler/icons-react";
 import { SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { WorkspaceContextSwitcher } from "./WorkspaceContextSwitcher";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function NavMain({
 	items,
@@ -15,6 +17,8 @@ export function NavMain({
 	}[];
 }) {
 	const { userWorkspaces, activeWorkspace } = useWorkspace();
+	const pathname = usePathname();
+
 	return (
 		<SidebarGroup>
 			<SidebarGroupContent className="flex flex-col gap-2">
@@ -31,14 +35,22 @@ export function NavMain({
 					</SidebarMenuItem>
 				</SidebarMenu>
 				<SidebarMenu>
-					{items.map((item) => (
-						<SidebarMenuItem key={item.title}>
-							<SidebarMenuButton tooltip={item.title}>
-								{item.icon && <item.icon />}
-								<span>{item.title}</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					))}
+					{items.map((item) => {
+						const isActive = item.url !== "#" && (pathname === item.url || pathname.startsWith(item.url + "/"));
+						return (
+							<SidebarMenuItem key={item.title}>
+								<SidebarMenuButton
+									asChild
+									isActive={isActive}
+									tooltip={item.title}>
+									<Link href={item.url}>
+										{item.icon && <item.icon />}
+										<span>{item.title}</span>
+									</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						);
+					})}
 				</SidebarMenu>
 			</SidebarGroupContent>
 		</SidebarGroup>

@@ -39,7 +39,7 @@ export function SiteHeader() {
 				<h1 className="text-base font-medium">Documents</h1>
 				<div className="ml-auto flex items-center gap-2">
 					<ThemeToggle />
-					{account && currentChain && currentChain.id === hederaTestnet.id && <span className="text-sm text-[#6b840a] dark:text-[#caef35]">Hedera Testnet</span>}
+					{account && currentChain && currentChain.id === hederaTestnet.id && <span className="text-sm text-[#6b840a] dark:text-[#caef35] hidden sm:flex">Hedera Testnet</span>}
 					<ConnectWalletButton />
 				</div>
 			</div>

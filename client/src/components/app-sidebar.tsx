@@ -12,7 +12,6 @@ import Image from "next/image";
 import { useTheme } from "@/context/theme-context";
 import { useActiveAccount } from "thirdweb/react";
 
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { theme } = useTheme();
 	const account = useActiveAccount();

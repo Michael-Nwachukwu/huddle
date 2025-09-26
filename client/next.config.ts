@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+// /my-monorepo/client/next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+	swcMinify: true, // Use SWC for faster compilation
+	watchOptions: {
+		ignored: [
+			"../contracts/**", // Ignore Solidity files and artifacts
+			"../readme.md", // Ignore root readme
+		],
+	},
 };
-
-export default nextConfig;
+module.exports = nextConfig;
