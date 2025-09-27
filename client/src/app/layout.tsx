@@ -20,15 +20,64 @@ export default function RootLayout({
 		<html
 			lang="en"
 			suppressHydrationWarning>
+			<head>
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+						(function() {
+							const storageKey = 'huddle-ui-theme';
+							const defaultTheme = 'system';
+							
+							function getTheme() {
+								if (typeof window !== 'undefined') {
+									const stored = localStorage.getItem(storageKey);
+									return stored || defaultTheme;
+								}
+								return defaultTheme;
+							}
+							
+							function applyTheme(theme) {
+								const root = document.documentElement;
+								root.classList.remove('light', 'dark');
+								
+								if (theme === 'system') {
+									const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+									root.classList.add(systemTheme);
+									return;
+								}
+								
+								root.classList.add(theme);
+							}
+							
+							const theme = getTheme();
+							applyTheme(theme);
+							
+							// Listen for system theme changes when using system theme
+							if (theme === 'system') {
+								const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+								mediaQuery.addEventListener('change', () => {
+									const currentTheme = getTheme();
+									if (currentTheme === 'system') {
+										applyTheme('system');
+									}
+								});
+							}
+						})();
+					`,
+					}}
+				/>
+			</head>
 			<body>
 				<ThirdwebProvider>
 					<ThemeProvider
 						defaultTheme="system"
 						storageKey="huddle-ui-theme">
-						<WorkspaceProvider>
-							{children}
-						</WorkspaceProvider>
-						<Toaster expand={true} richColors closeButton />
+						<WorkspaceProvider>{children}</WorkspaceProvider>
+						<Toaster
+							expand={true}
+							richColors
+							closeButton
+						/>
 					</ThemeProvider>
 				</ThirdwebProvider>
 			</body>

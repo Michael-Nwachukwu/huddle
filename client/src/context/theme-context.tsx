@@ -22,28 +22,35 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
-export function ThemeProvider({ children, defaultTheme = "system", storageKey = "vite-ui-theme", ...props }: ThemeProviderProps) {
+export function ThemeProvider({ children, defaultTheme = "system", storageKey = "huddle-ui-theme", ...props }: ThemeProviderProps) {
 	const [theme, setTheme] = useState<Theme>(() => {
-		if (typeof window !== 'undefined') {
-			return localStorage?.getItem(storageKey) as Theme || defaultTheme;
+		if (typeof window !== "undefined") {
+			return (localStorage?.getItem(storageKey) as Theme) || defaultTheme;
 		}
 		return defaultTheme;
 	});
 
+	const [mounted, setMounted] = useState(false);
+
 	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	useEffect(() => {
+		if (!mounted) return;
+
 		const root = window.document.documentElement;
 
 		root.classList.remove("light", "dark");
 
 		if (theme === "system") {
 			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-
 			root.classList.add(systemTheme);
 			return;
 		}
 
 		root.classList.add(theme);
-	}, [theme]);
+	}, [theme, mounted]);
 
 	const value = {
 		theme,
@@ -57,7 +64,7 @@ export function ThemeProvider({ children, defaultTheme = "system", storageKey = 
 		<ThemeProviderContext.Provider
 			{...props}
 			value={value}>
-			{children}
+			{mounted ? children : <div style={{ visibility: "hidden" }}>{children}</div>}
 		</ThemeProviderContext.Provider>
 	);
 }
