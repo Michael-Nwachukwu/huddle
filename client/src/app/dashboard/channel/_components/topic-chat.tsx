@@ -249,7 +249,7 @@ export function TopicChat({ topicId, className }: TopicChatProps) {
                                         <Card className={cn(
                                             "p-3 shadow-sm",
                                             isCurrentUser
-                                                ? "bg-blue-500 text-white ml-auto"
+                                                ? "bg-[#6b840a] text-white ml-auto"
                                                 : "bg-white dark:bg-neutral-800"
                                         )}>
                                             <p className="text-sm whitespace-pre-wrap break-words">
