@@ -19,6 +19,7 @@ import { client } from "../../client";
 import { hederaTestnet } from "@/utils/chains";
 import { useSendTransaction } from "thirdweb/react";
 import { addTaskAssignee } from "@/lib/tasksABI";
+import { extractRevertReason } from "@/lib/utils";
 
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
 	const isMobile = useIsMobile();
@@ -47,12 +48,6 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 			setComment("");
 		}
 	};
-
-	// const handleAddMember = (memberAddress: string) => {
-	// 	// Handle adding member to task logic here
-	// 	console.log("Adding member:", memberAddress);
-	// 	setIsAddMemberOpen(false);
-	// };
 
 	const handleAddMember = async (memberAddress: string) => {
 		// e.preventDefault();
@@ -112,16 +107,21 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 						console.error("Error processing transaction result:", error);
 					}
 				},
+				onError: (error) => {
+					const revertReason = extractRevertReason(error);
+					toast.error(revertReason, { id: toastId, position: "top-right" });
+					setIsAddMemberOpen(false);
+				},
 			});
 		} catch (error) {
 			toast.error((error as Error).message || "Transaction failed.", {
 				id: toastId,
 				position: "top-right",
 			});
-			toast.dismiss(toastId);
+			// toast.dismiss(toastId);
 			setIsSubmitting(false);
 		}
-		setIsAddMemberOpen(false);
+		// setIsAddMemberOpen(false);
 	};
 
 	return (
@@ -192,6 +192,9 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							<div className="flex items-center gap-2">
 								<Address address={task?.assignees?.[0] ?? ""} />
 								{task?.assignees && task.assignees.length > 1 && <span> + {task.assignees.length ?? 0}</span>}
+								{/* <p>
+									{task?.assignees.length}
+								</p> */}
 								<DropdownMenu
 									open={isAddMemberOpen}
 									onOpenChange={setIsAddMemberOpen}>
