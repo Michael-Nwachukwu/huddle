@@ -73,7 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			},
 			{
 				name: "Huddle AI",
-				url: "#",
+				url: "/dashboard/bot",
 				icon: IconReport,
 			},
 			{
