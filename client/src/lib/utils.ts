@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { NormalizedTask, TypeSafeTaskView } from "@/utils/types";
+import { NormalizedTask } from "@/utils/types";
 import { useMemo } from "react";
 import { TaskView } from "@/hooks/use-fetch-tasks";
 

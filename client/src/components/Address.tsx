@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { useHederaAccount } from '@/hooks/use-hedera-account';
-import { useActiveAccount, useReadContract } from 'thirdweb/react';
-import { contract } from '@/lib/contract';
+import { useReadContract } from 'thirdweb/react';
+import { contract } from '@/lib/huddle-taskReader-contract';
 
 interface AddressProps {
     address: string;
@@ -10,19 +10,17 @@ interface AddressProps {
 
 const Address: React.FC<AddressProps> = ({ address }) => {
 
-    const account = useActiveAccount();
-
     const {
         data: username,
         // isLoading: isLoadingUsername,
         // error: usernameError,
     } = useReadContract({
-        contract,
+        contract: contract,
         method:
             "function usernames(address) view returns (string)",
-        params: [account?.address || "0x0"],
+        params: [address || "0x0"],
         queryOptions: {
-            enabled: !!account?.address,
+            enabled: !!address,
         },
     });
 
@@ -59,9 +57,9 @@ const Address: React.FC<AddressProps> = ({ address }) => {
             <div className="flex flex-col items-start">
                 {
                     username &&
-                    <p className="text-sm text-white font-medium">{username}</p>
+                    <p className="text-sm font-medium">{username}</p>
                 }
-                <span className='font-light text-gray-400 font-mono'>{data?.account || shortenAddress(address)}</span>
+                <span className='font-light text-sm text-gray-500 dark:text-gray-400 font-mono'>{data?.account || shortenAddress(address)}</span>
             </div>
         </div>
     );

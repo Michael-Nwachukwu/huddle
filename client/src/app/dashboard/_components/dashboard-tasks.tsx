@@ -1,15 +1,20 @@
 import { cn } from "@/lib/utils";
-import React from "react";
+import React, { useState } from "react";
 import GridCard from "../tasks/_components/GridCard";
 import { useFetchTasks } from "@/hooks/use-fetch-tasks";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useNormalizedTasks } from "@/lib/utils";
+import ViewTaskDrawer from "@/components/view-task-drawer";
+import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 
 interface DashboardTasksProps {
 	className?: string;
 }
 
 export default function DashboardTasks({ className }: DashboardTasksProps) {
+	const [isOpen, setIsOpen] = useState(false);
+	const [selectedTask, setSelectedTask] = useState<TypeSafeTaskView | null>(null);
+
 	const { activeWorkspaceID } = useWorkspace();
 	const { tasks } = useFetchTasks(activeWorkspaceID, 0, 12, false, 255);
 
@@ -25,7 +30,12 @@ export default function DashboardTasks({ className }: DashboardTasksProps) {
 							className="w-[280px] shrink-0">
 							<GridCard
 								item={task}
-								setIsOpen={() => {}}
+								setIsOpen={() => setIsOpen(true)}
+								onViewDetails={(task) => {
+									// onTaskSelect?.(task);
+									setSelectedTask(task);
+									setIsOpen(true);
+								}}
 							/>
 						</div>
 					))
@@ -35,6 +45,11 @@ export default function DashboardTasks({ className }: DashboardTasksProps) {
 					</div>
 				)}
 			</div>
+			<ViewTaskDrawer
+				isOpen={isOpen}
+				setIsOpen={setIsOpen}
+				task={selectedTask}
+			/>
 		</div>
 	);
 }
