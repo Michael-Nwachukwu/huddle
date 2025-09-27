@@ -331,16 +331,20 @@ export default function CreateTaskForm() {
 
             // Get proper token address for the contract
             let tokenAddress;
-            if (isNativePayment) {
-                // For HBAR/native payments, check if your contract expects a specific address
-                // You might need to use the wrapped HBAR address or check your contract setup
-                tokenAddress = selectedToken?.address || "0x0000000000000000000000000000000000000000";
-                console.log("Using native payment with token address:", tokenAddress);
-            } else {
-                if (!selectedToken?.address) {
-                    throw new Error("Selected token does not have a valid address");
+            if (isRewarded) {
+                if (isNativePayment) {
+                    // For HBAR/native payments, check if your contract expects a specific address
+                    // You might need to use the wrapped HBAR address or check your contract setup
+                    tokenAddress = selectedToken?.address || "0x0000000000000000000000000000000000000000";
+                    console.log("Using native payment with token address:", tokenAddress);
+                } else {
+                    if (!selectedToken?.address) {
+                        throw new Error("Selected token does not have a valid address");
+                    }
+                    tokenAddress = selectedToken.address;
                 }
-                tokenAddress = selectedToken.address;
+            } else {
+                tokenAddress = "0x0000000000000000000000000000000000000000";
             }
 
             // Debug logging

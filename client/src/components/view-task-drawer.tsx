@@ -489,18 +489,15 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 								<span className="text-muted-foreground text-sm">Attachments</span>
 							</div>
 							<div className="ml-7 flex gap-3">
-								{task?.fileId && (
+								{task?.fileId !== "none" ? (
 									<div
 										className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors"
 										onClick={handleFileClick}
 										title="Click to view file details">
 										<FileText className="h-6 w-6 text-muted-foreground" />
 									</div>
-								)}
-								{!task?.fileId && (
-									<div className="w-16 h-16 bg-muted/50 rounded-lg flex items-center justify-center">
-										<FileText className="h-6 w-6 text-muted-foreground/50" />
-									</div>
+								) : (
+									<p>No attachments</p>
 								)}
 							</div>
 						</div>
