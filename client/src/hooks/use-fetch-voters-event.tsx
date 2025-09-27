@@ -48,7 +48,7 @@ function MyEventComponent({ proposalId, workspaceId }: { proposalId: number; wor
             {events?.map((event, index) => {
                 const voterAddress = event.args.voter;
                 const voteChoice = voteOptionsMap[event.args.vote];
-                const tokenValue = "5 XFI"; // Static value since weight is not yet available
+                const tokenValue = "5 HBAR"; // Static value since weight is not yet available
 
                 return (
                     <div
