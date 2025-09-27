@@ -26,17 +26,14 @@ export function NavMain({
 					<SidebarMenuItem>
 						<WorkspaceContextSwitcher
 							workspaces={userWorkspaces}
-							activeWorkspace={
-								activeWorkspace
-									? { workspaceId: activeWorkspace.id, name: activeWorkspace.workspaceName }
-									: { workspaceId: "", name: "" }
-							}
+							activeWorkspace={activeWorkspace ? { workspaceId: activeWorkspace.id, name: activeWorkspace.workspaceName } : { workspaceId: "", name: "" }}
 						/>
 					</SidebarMenuItem>
 				</SidebarMenu>
 				<SidebarMenu>
 					{items.map((item) => {
-						const isActive = item.url !== "#" && (pathname === item.url || pathname.startsWith(item.url + "/"));
+						// Only mark as active for exact match - no parent/child relationships
+						const isActive = item.url !== "#" && pathname === item.url;
 						return (
 							<SidebarMenuItem key={item.title}>
 								<SidebarMenuButton

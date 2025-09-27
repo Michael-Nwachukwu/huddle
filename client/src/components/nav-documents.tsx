@@ -23,7 +23,8 @@ export function NavDocuments({
 			<SidebarGroupLabel>Tools</SidebarGroupLabel>
 			<SidebarMenu>
 				{items.map((item) => {
-					const isActive = item.url !== "#" && (pathname === item.url || pathname.startsWith(item.url + "/"));
+					// Only mark as active for exact match - no parent/child relationships
+					const isActive = item.url !== "#" && pathname === item.url;
 					return (
 						<SidebarMenuItem key={item.name}>
 							<SidebarMenuButton
