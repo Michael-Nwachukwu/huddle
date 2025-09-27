@@ -5,10 +5,16 @@ import { useReadContract } from 'thirdweb/react';
 import { contract } from '@/lib/huddle-taskReader-contract';
 
 interface AddressProps {
-    address: string;
+    address?: string;
+    accountId?: string;
+    hideIcon?: boolean;
+    hideUsername?: boolean;
+    hideAccountId?: boolean;
 }
 
-const Address: React.FC<AddressProps> = ({ address }) => {
+const Address: React.FC<AddressProps> = ({ address, hideIcon, hideUsername, hideAccountId, accountId }) => {
+
+    const { data } = useHederaAccount(address || accountId || "");
 
     const {
         data: username,
@@ -18,13 +24,13 @@ const Address: React.FC<AddressProps> = ({ address }) => {
         contract: contract,
         method:
             "function usernames(address) view returns (string)",
-        params: [address || "0x0"],
+        params: [address || data?.evmAddress || "0x0"],
         queryOptions: {
-            enabled: !!address,
+            enabled: !!address || !!data?.evmAddress, // Updated to enable when EVM address is available
         },
     });
 
-    const { data } = useHederaAccount(address);
+
 
     const shortenAddress = (addr: string): string => {
         if (!addr || addr.length < 10 || !addr.startsWith('0x')) {
@@ -47,19 +53,33 @@ const Address: React.FC<AddressProps> = ({ address }) => {
 
     return (
         <div className="inline-flex items-center gap-2">
-            <Image
-                src={blockieUrl}
-                alt={`Identicon for ${address}`}
-                width={32}
-                height={32}
-                className="rounded-full w-6"
-            />
+            {
+                !hideIcon && <Image
+                    src={blockieUrl}
+                    alt={`Identicon for ${address}`}
+                    width={32}
+                    height={32}
+                    className="rounded-full w-6"
+                />
+            }
+
             <div className="flex flex-col items-start">
                 {
-                    username &&
+                    !hideUsername && username && // Added hideUsername check
                     <p className="text-sm font-medium">{username}</p>
                 }
-                <span className='font-light text-sm text-gray-500 dark:text-gray-400 font-mono'>{data?.account || shortenAddress(address)}</span>
+                {
+                    !hideAccountId && (
+                        address ? (
+                            <span className='font-light text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-mono'>{data?.account || shortenAddress(address)}</span>
+                        ) : accountId ? (
+                            <span className='font-light text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-mono'>{shortenAddress(data?.evmAddress || "") || accountId}</span>
+                        ) : (
+                            <></>
+                        )
+                    )
+                }
+
             </div>
         </div>
     );
