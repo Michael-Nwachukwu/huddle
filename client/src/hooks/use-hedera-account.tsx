@@ -4,6 +4,7 @@ interface HederaAccountData {
     account: string;
     balance: string;
     pendingReward: number;
+    evmAddress: string;
 }
 
 export const useHederaAccount = (address: string) => {
@@ -35,6 +36,7 @@ export const useHederaAccount = (address: string) => {
                     account: json.account,
                     balance: formattedBalance,
                     pendingReward: json.pending_reward,
+                    evmAddress: json.evm_address
                 });
             } catch (err: any) {
                 setError(err.message || 'Failed to fetch account data');
