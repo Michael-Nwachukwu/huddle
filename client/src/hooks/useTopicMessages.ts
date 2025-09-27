@@ -39,7 +39,7 @@ interface UseTopicMessagesOptions {
     order?: 'asc' | 'desc';
     encoding?: 'base64';
     refetchInterval?: number;
-    cacheTimeout?: number; // How long cache is valid in ms
+    cacheTimeout?: number;
 }
 
 interface UseTopicMessagesReturn {
@@ -55,7 +55,7 @@ interface UseTopicMessagesReturn {
 
 const HEDERA_MIRROR_NODE_BASE_URL = 'https://testnet.mirrornode.hedera.com';
 
-// In-memory cache - you could also use localStorage or a proper cache library
+// In-memory cache
 const messageCache = new Map<string, CachedTopicData>();
 
 export function useTopicMessages(
@@ -66,8 +66,8 @@ export function useTopicMessages(
         limit = 25,
         order = 'desc',
         encoding = 'base64',
-        refetchInterval = 10000, // Increased to 10 seconds since we have smart caching
-        cacheTimeout = 30000, // 30 seconds cache timeout
+        refetchInterval = 10000,
+        cacheTimeout = 30000,
     } = options;
 
     const [messages, setMessages] = useState<TopicMessage[]>([]);
@@ -80,6 +80,7 @@ export function useTopicMessages(
 
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const mountedRef = useRef(true);
+    const currentTopicRef = useRef<string | null>(null);
 
     // Stable cache key function
     const getCacheKey = useCallback((id: string) => {
@@ -91,52 +92,11 @@ export function useTopicMessages(
         return Date.now() - cachedData.lastFetchTime < cacheTimeout;
     }, [cacheTimeout]);
 
-    // Stable cache update function
-    const updateCache = useCallback((id: string, data: Partial<CachedTopicData>) => {
-        const cacheKey = getCacheKey(id);
-        const existing = messageCache.get(cacheKey) || {
-            messages: [],
-            lastFetchTime: 0,
-            latestTimestamp: null,
-            hasMore: false,
-            nextUrl: null,
-        };
-
-        messageCache.set(cacheKey, {
-            ...existing,
-            ...data,
-            lastFetchTime: Date.now(),
-        });
-    }, [getCacheKey]);
-
-    // Stable fetch new messages function
-    const fetchNewMessages = useCallback(async (id: string, since?: string) => {
-        let fetchUrl = `${HEDERA_MIRROR_NODE_BASE_URL}/api/v1/topics/${id}/messages?limit=${limit}&order=${order}&encoding=${encoding}`;
-
-        if (since && order === 'desc') {
-            fetchUrl += `&timestamp=gt:${since}`;
-        } else if (since && order === 'asc') {
-            fetchUrl += `&timestamp=gt:${since}`;
-        }
-
-        const response = await fetch(fetchUrl);
-
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('Topic not found');
-            } else if (response.status === 400) {
-                const errorData = await response.json();
-                throw new Error(errorData._status?.messages?.[0]?.message || 'Invalid request parameters');
-            }
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return await response.json();
-    }, [limit, order, encoding]);
-
-    // Main fetch function
+    // Main fetch function - REMOVED messages dependency
     const fetchMessages = useCallback(async (url?: string, isLoadMore = false) => {
-        if (!topicId) return;
+        if (!topicId || !mountedRef.current) return;
+
+        console.log('Fetching messages for topic:', topicId, { url, isLoadMore });
 
         const cacheKey = getCacheKey(topicId);
         const cachedData = messageCache.get(cacheKey);
@@ -144,11 +104,13 @@ export function useTopicMessages(
         // Check if we can use cached data for initial load
         if (!isLoadMore && !url && cachedData && isCacheValid(cachedData)) {
             console.log('Using cached messages for topic:', topicId);
-            setMessages(cachedData.messages);
-            setHasMore(cachedData.hasMore);
-            setNextUrl(cachedData.nextUrl);
-            setIsFromCache(true);
-            setLoading(false);
+            if (mountedRef.current) {
+                setMessages(cachedData.messages);
+                setHasMore(cachedData.hasMore);
+                setNextUrl(cachedData.nextUrl);
+                setIsFromCache(true);
+                setLoading(false);
+            }
             return;
         }
 
@@ -158,19 +120,47 @@ export function useTopicMessages(
         setIsFromCache(false);
 
         try {
-            let data: MessagesResponse;
+            let fetchUrl: string;
 
             if (url) {
-                // Load more - use provided URL
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                data = await response.json();
-            } else if (!isLoadMore && cachedData && cachedData.messages.length > 0) {
+                fetchUrl = url;
+            } else if (!isLoadMore && cachedData && cachedData.messages.length > 0 && cachedData.latestTimestamp) {
                 // Smart refresh - only fetch newer messages
                 console.log('Fetching new messages since:', cachedData.latestTimestamp);
-                data = await fetchNewMessages(topicId, cachedData.latestTimestamp || undefined);
+                fetchUrl = `${HEDERA_MIRROR_NODE_BASE_URL}/api/v1/topics/${topicId}/messages?limit=${limit}&order=${order}&encoding=${encoding}&timestamp=gt:${cachedData.latestTimestamp}`;
+            } else {
+                // Initial load or full refresh
+                fetchUrl = `${HEDERA_MIRROR_NODE_BASE_URL}/api/v1/topics/${topicId}/messages?limit=${limit}&order=${order}&encoding=${encoding}`;
+            }
 
-                // Merge new messages with cached ones
+            console.log('Fetching from URL:', fetchUrl);
+
+            const response = await fetch(fetchUrl);
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Topic not found');
+                } else if (response.status === 400) {
+                    const errorData = await response.json();
+                    throw new Error(errorData._status?.messages?.[0]?.message || 'Invalid request parameters');
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data: MessagesResponse = await response.json();
+
+            if (!mountedRef.current || currentTopicRef.current !== topicId) return;
+
+            let finalMessages: TopicMessage[] = [];
+
+            if (isLoadMore) {
+                // For load more, append to existing messages
+                setMessages(prev => {
+                    finalMessages = [...prev, ...data.messages];
+                    return finalMessages;
+                });
+            } else if (!isLoadMore && cachedData && cachedData.messages.length > 0 && url === undefined) {
+                // Smart refresh - merge new messages with cached ones
                 const newMessages = data.messages.filter(newMsg =>
                     !cachedData.messages.some(cachedMsg =>
                         cachedMsg.consensus_timestamp === newMsg.consensus_timestamp &&
@@ -180,64 +170,49 @@ export function useTopicMessages(
 
                 if (newMessages.length > 0) {
                     console.log(`Found ${newMessages.length} new messages`);
-                    const mergedMessages = order === 'desc'
+                    finalMessages = order === 'desc'
                         ? [...newMessages, ...cachedData.messages]
                         : [...cachedData.messages, ...newMessages];
-
-                    data.messages = mergedMessages;
                 } else {
                     console.log('No new messages found');
-                    data.messages = cachedData.messages;
+                    finalMessages = cachedData.messages;
                 }
+
+                setMessages(finalMessages);
             } else {
                 // Initial load or full refresh
-                const fetchUrl = `${HEDERA_MIRROR_NODE_BASE_URL}/api/v1/topics/${topicId}/messages?limit=${limit}&order=${order}&encoding=${encoding}`;
-                const response = await fetch(fetchUrl);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                data = await response.json();
-            }
-
-            if (!mountedRef.current) return;
-
-            if (isLoadMore) {
-                const newMessages = [...messages, ...data.messages];
-                setMessages(newMessages);
-                updateCache(topicId, {
-                    messages: newMessages,
-                    hasMore: !!data.links.next,
-                    nextUrl: data.links.next,
-                });
-            } else {
-                setMessages(data.messages);
-
-                // Update cache with new data
-                const latestTimestamp = data.messages.length > 0
-                    ? (order === 'desc' ? data.messages[0].consensus_timestamp : data.messages[data.messages.length - 1].consensus_timestamp)
-                    : null;
-
-                updateCache(topicId, {
-                    messages: data.messages,
-                    latestTimestamp,
-                    hasMore: !!data.links.next,
-                    nextUrl: data.links.next,
-                });
+                finalMessages = data.messages;
+                setMessages(finalMessages);
             }
 
             setHasMore(!!data.links.next);
             setNextUrl(data.links.next);
 
+            // Update cache
+            const latestTimestamp = finalMessages.length > 0
+                ? (order === 'desc' ? finalMessages[0].consensus_timestamp : finalMessages[finalMessages.length - 1].consensus_timestamp)
+                : null;
+
+            messageCache.set(cacheKey, {
+                messages: finalMessages,
+                lastFetchTime: Date.now(),
+                latestTimestamp,
+                hasMore: !!data.links.next,
+                nextUrl: data.links.next,
+            });
+
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && currentTopicRef.current === topicId) {
                 const errorMessage = err instanceof Error ? err.message : 'Failed to fetch messages';
                 setError(errorMessage);
                 console.error('Error fetching topic messages:', err);
             }
         } finally {
-            if (mountedRef.current) {
+            if (mountedRef.current && currentTopicRef.current === topicId) {
                 setLoadingState(false);
             }
         }
-    }, [topicId, limit, order, encoding, getCacheKey, isCacheValid, updateCache, fetchNewMessages, messages]);
+    }, [topicId, limit, order, encoding, getCacheKey, isCacheValid]); // REMOVED messages dependency
 
     const loadMore = useCallback(async () => {
         if (!nextUrl || loadingMore || !hasMore) return;
@@ -252,68 +227,59 @@ export function useTopicMessages(
         await fetchMessages();
     }, [topicId, fetchMessages, getCacheKey]);
 
-    const smartRefresh = useCallback(async () => {
-        if (!topicId) return;
-        await fetchMessages();
-    }, [topicId, fetchMessages]);
-
-    // Reset states when topicId changes or becomes null
+    // SINGLE useEffect for topic changes and intervals
     useEffect(() => {
+        // Clear any existing interval
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
+        // Reset states when topicId changes or becomes null
         if (!topicId) {
+            currentTopicRef.current = null;
             setMessages([]);
             setError(null);
             setLoading(false);
             setIsFromCache(false);
             setHasMore(false);
             setNextUrl(null);
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
             return;
         }
 
-        // Clear any existing interval
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
+        // Update current topic ref
+        currentTopicRef.current = topicId;
 
         // Initial fetch
         fetchMessages();
 
-        // Setup smart refresh interval
+        // Setup interval for periodic refresh
         intervalRef.current = setInterval(() => {
-            if (mountedRef.current) {
-                smartRefresh();
+            if (mountedRef.current && currentTopicRef.current === topicId) {
+                console.log('Interval refresh for topic:', topicId);
+                fetchMessages();
             }
         }, refetchInterval);
 
+        // Cleanup function
         return () => {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
+                intervalRef.current = null;
             }
         };
-    }, [topicId]); // Only depend on topicId
-
-    // Separate effect for setting up interval with stable functions
-    useEffect(() => {
-        if (!topicId) return;
-
-        const interval = setInterval(() => {
-            if (mountedRef.current) {
-                smartRefresh();
-            }
-        }, refetchInterval);
-
-        return () => clearInterval(interval);
-    }, [topicId, refetchInterval, smartRefresh]);
+    }, [topicId, fetchMessages, refetchInterval]);
 
     // Cleanup on unmount
     useEffect(() => {
+        mountedRef.current = true;
+
         return () => {
+            console.log('Component unmounting, cleaning up...');
             mountedRef.current = false;
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
+                intervalRef.current = null;
             }
         };
     }, []);
@@ -336,21 +302,19 @@ export function decodeMessage(base64Message: string): string {
         return atob(base64Message);
     } catch (error) {
         console.error('Error decoding message:', error);
-        return base64Message; // Return original if decoding fails
+        return base64Message;
     }
 }
 
 // Utility to clear cache for specific topic or all topics
 export function clearMessageCache(topicId?: string) {
     if (topicId) {
-        // Clear cache for specific topic patterns
         for (const [key] of messageCache) {
             if (key.startsWith(topicId)) {
                 messageCache.delete(key);
             }
         }
     } else {
-        // Clear all cache
         messageCache.clear();
     }
 }
