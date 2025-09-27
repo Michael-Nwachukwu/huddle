@@ -1,16 +1,16 @@
-import { ConnectButton, useActiveAccount, useConnectModal } from "thirdweb/react";
+import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { client } from "../../client";
 import { hederaTestnet } from "@/utils/chains";
 import { Button } from "./ui/button";
 
 const ConnectWalletButton = () => {
 	const account = useActiveAccount();
-	const { connect } = useConnectModal();
+	// const { connect } = useConnectModal();
 
-	async function handleConnect() {
-		const wallet = await connect({ client }); // opens the connect modal
-		console.log("connected to", wallet);
-	}
+	// async function handleConnect() {
+	// 	const wallet = await connect({ client }); // opens the connect modal
+	// 	console.log("connected to", wallet);
+	// }
 
 	return (
 		<>

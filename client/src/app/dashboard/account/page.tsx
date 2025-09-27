@@ -35,10 +35,12 @@ const Page = () => {
     });
 
     const { data: userRecords } = useReadContract({
-        contract : contract,
-        method: "function userRecords(address) view returns ((uint16 totalTasksCounter, uint16 completedTaskCounter, uint16 inProgressTaskCounter, uint16 overdueTaskCounter, uint16 pendingTaskCounter, uint8 proposalCreatedCounter, uint8 proposalVotedCounter, uint256 ercRewardAmountSum, uint256 nativeRewardAmountSum)[])",
+        contract,
+        method:
+          "function userRecords(address) view returns ((uint16 totalTasksCounter, uint16 completedTaskCounter, uint16 inProgressTaskCounter, uint16 overdueTaskCounter, uint16 pendingTaskCounter, uint8 proposalCreatedCounter, uint8 proposalVotedCounter, uint256 ercRewardAmountSum, uint256 nativeRewardAmountSum))",
         params: [account?.address || "0x0"],
-    });
+      });
+      
 
     console.log("raw user stats", userRecords);
 
@@ -71,15 +73,15 @@ const Page = () => {
     }
 
     const userStats: UserStats = {
-        totalTasksCounter: userRecords?.[0]?.totalTasksCounter || 0,
-        completedTaskCounter: userRecords?.[0]?.completedTaskCounter || 0,
-        inProgressTaskCounter: userRecords?.[0]?.inProgressTaskCounter || 0,
-        overdueTaskCounter: userRecords?.[0]?.overdueTaskCounter || 0,
-        pendingTaskCounter: userRecords?.[0]?.pendingTaskCounter || 0,
-        proposalCreatedCounter: userRecords?.[0]?.proposalCreatedCounter || 0,
-        proposalVotedCounter: userRecords?.[0]?.proposalVotedCounter || 0,
-        ercRewardAmountSum: Number(userRecords?.[0]?.ercRewardAmountSum || 0),
-        nativeRewardAmountSum: Number(userRecords?.[0]?.nativeRewardAmountSum || 0),
+        totalTasksCounter: userRecords?.totalTasksCounter || 0,
+        completedTaskCounter: userRecords?.completedTaskCounter || 0,
+        inProgressTaskCounter: userRecords?.inProgressTaskCounter || 0,
+        overdueTaskCounter: userRecords?.overdueTaskCounter || 0,
+        pendingTaskCounter: userRecords?.pendingTaskCounter || 0,
+        proposalCreatedCounter: userRecords?.proposalCreatedCounter || 0,
+        proposalVotedCounter: userRecords?.proposalVotedCounter || 0,
+        ercRewardAmountSum: Number(userRecords?.ercRewardAmountSum || 0),
+        nativeRewardAmountSum: Number(userRecords?.nativeRewardAmountSum || 0),
     };
 
     console.log("formatted user stats", userStats);

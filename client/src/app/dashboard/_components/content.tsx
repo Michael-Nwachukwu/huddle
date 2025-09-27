@@ -3,8 +3,12 @@ import TransactionHistory from "./tx-history"
 import WorkspaceMembers from "./workspace-members"
 import DashboardTasks from "./dashboard-tasks"
 import { CreateTaskDrawer } from "@/components/create-task-drawer"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useActiveAccount } from "thirdweb/react"
 
 export default function Content() {
+  const {activeWorkspace} = useWorkspace();
+  const account = useActiveAccount();
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -15,7 +19,9 @@ export default function Content() {
               <Calendar className="w-3.5 h-3.5 text-zinc-900 dark:text-zinc-50" />
               Catch up on recent tasks
             </h2>
-            <CreateTaskDrawer />
+            {
+              activeWorkspace?.owner === account?.address && <CreateTaskDrawer />
+            }
           </div>
           <DashboardTasks />
         </div>

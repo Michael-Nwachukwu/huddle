@@ -175,7 +175,7 @@ export const useMultipleAssigneesClaimStatus = (workSpaceID: number, taskId: num
 		return () => {
 			cancelled = true;
 		};
-	}, [account?.address, workSpaceID, taskId, assigneesKey]);
+	}, [account?.address, workSpaceID, taskId, assigneesKey, assignees]);
 
 	const claimedCount = claimStatuses.filter((s) => s.hasClaimed).length;
 	const hasErrors = claimStatuses.some((s) => s.error);

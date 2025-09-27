@@ -29,12 +29,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			},
 			{
 				title: "Huddle",
-				url: "#",
+				url: "/dashboard/channel",
 				icon: IconListDetails,
 			},
 			{
 				title: "Tasks",
-				url: "#",
+				url: "/dashboard/tasks",
 				icon: IconChartBar,
 			},
 			{
@@ -43,8 +43,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				icon: IconFolder,
 			},
 			{
-				title: "Team",
-				url: "#",
+				title: "Account",
+				url: "/dashboard/account",
 				icon: IconUsers,
 			},
 		],

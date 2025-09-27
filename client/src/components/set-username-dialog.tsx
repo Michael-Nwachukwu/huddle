@@ -86,7 +86,7 @@ export function SetUsernameDialog({ isOpen, setIsOpen, oldUsername }: { isOpen: 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogContent className="sm:max-w-[425px]">
-                <form onSubmit={setUsername}>
+                <form onSubmit={setUsername} className="space-y-4">
                     <DialogHeader>
                         <DialogTitle>Edit profile</DialogTitle>
                         <DialogDescription>

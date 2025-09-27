@@ -20,6 +20,7 @@ import ViewTaskDrawer from "@/components/view-task-drawer";
 import { Status } from "@/utils/types";
 import type { NormalizedTask } from "@/utils/types";
 import { useNormalizedTasks } from "@/lib/utils";
+import { useActiveAccount } from "thirdweb/react";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 
@@ -33,7 +34,8 @@ export default function Page() {
 	const [statusFilter, setStatusFilter] = useState<Status>(Status.Pending);
 	const [priorityFilter, setPriorityFilter] = useState<"All" | "Low" | "Medium" | "High">("All");
 
-	const { activeWorkspaceID } = useWorkspace();
+	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
+	const account = useActiveAccount();
 
 	const { tasks } = useFetchTasks(activeWorkspaceID, 0, 12, assignedToMe, statusFilter);
 	console.log("tasks", tasks);
@@ -170,8 +172,10 @@ export default function Page() {
 								</DropdownMenuContent>
 							</DropdownMenu>
 						</div>
-						{/* <Button className="w-full sm:w-auto">Add Task</Button> */}
-						<CreateTaskDrawer />
+						{
+							activeWorkspace?.owner === account?.address && <CreateTaskDrawer />
+						}
+						{/* <CreateTaskDrawer /> */}
 					</div>
 
 					<ViewToolbar

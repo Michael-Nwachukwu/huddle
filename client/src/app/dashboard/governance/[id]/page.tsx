@@ -327,15 +327,15 @@ export default function VotingInterface() {
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <span className="text-stone-800 dark:text-stone-400">Strategy</span>
-                                        <span className="text-stone-500 dark:text-stone-200">1 Token = 1 vote</span>
+                                        <span className="text-stone-500 dark:text-stone-200">1 Workspace NFT badge = 1 vote</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-stone-800 dark:text-stone-400">Support threshold</span>
                                         <span className="text-stone-500 dark:text-stone-200">{">"}50%</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-stone-800 dark:text-stone-400">Minimum participation</span>
-                                        <span className="text-stone-500 dark:text-stone-200">1 XFI</span>
+                                        <span className="text-stone-800 dark:text-stone-400">Vote Pass</span>
+                                        <span className="text-stone-500 dark:text-stone-200">Workspace Mmebership NFT</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-stone-800 dark:text-stone-400">Start</span>
