@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 // import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2 } from "lucide-react";
+import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2, Check } from "lucide-react";
 import type { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 import Address from "./Address";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -17,15 +17,21 @@ import { toast } from "sonner";
 import { contract } from "@/lib/contract";
 import { client } from "../../client";
 import { hederaTestnet } from "@/utils/chains";
-import { useSendTransaction } from "thirdweb/react";
+import { useSendTransaction, useActiveAccount } from "thirdweb/react";
 import { addTaskAssignee } from "@/lib/tasksABI";
-import { extractRevertReason } from "@/lib/utils";
+import { cn, extractRevertReason } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+
+import { statusConfig, type StatusKey } from "@/app/dashboard/tasks/_components/GridCard";
+import { markAsABI } from "@/lib/tasksABI";
+import { Status } from "@/utils/types";
 
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
 	const isMobile = useIsMobile();
 	const { teamMembers } = useWorkspace(); // Access teamMembers from the useWorkspace();
-	const { activeWorkspaceID } = useWorkspace();
+	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const { mutateAsync: sendTransaction } = useSendTransaction();
+	const account = useActiveAccount();
 
 	const [comment, setComment] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,13 +40,18 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 
 	const statusLabel = useMemo(() => {
 		if (!task) return "";
-		return task.taskState === 0 ? "Pending" : task.taskState === 3 ? "In Progress" : "Completed";
+		return task.taskState === 0 ? "Pending" : task.taskState === 1 ? "Completed" : task.taskState === 2 ? "Archived" : task.taskState === 3 ? "In Progress" : "Assignee Done";
 	}, [task]);
 
 	const priorityLabel = useMemo(() => {
 		if (!task) return "";
 		return task.priority === 0 ? "Low" : task.priority === 1 ? "Medium" : "High";
 	}, [task]);
+
+	const status: StatusKey = useMemo(() => {
+		if (!statusLabel) return "pending";
+		return statusLabel.toLowerCase().replace(/\s+/g, "-") as StatusKey;
+	}, [statusLabel]);
 
 	const handlePostComment = () => {
 		if (comment.trim()) {
@@ -124,6 +135,84 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 		// setIsAddMemberOpen(false);
 	};
 
+	// Helper functions to check user permissions
+	const isTaskOwner = useMemo(() => {
+		if (!task || !activeWorkspace || !account?.address) return false;
+		return activeWorkspace.owner === account.address;
+	}, [task, account?.address, activeWorkspace]);
+
+	const isAssignee = useMemo(() => {
+		if (!task || !account?.address) return false;
+		return task.assignees?.includes(account.address) || false;
+	}, [task, account?.address]);
+
+	const canChangeStatus = useMemo(() => {
+		return isTaskOwner || isAssignee;
+	}, [isTaskOwner, isAssignee]);
+
+	const handleStatusChange = async (taskId: number, taskState: Status) => {
+		// e.preventDefault();
+
+		if (isSubmitting) return;
+
+		setIsSubmitting(true);
+		const toastId = toast.loading("Updating task status...", {
+			position: "top-right",
+		});
+
+		try {
+			const transaction = prepareContractCall({
+				contract,
+				method: markAsABI,
+				params: [BigInt(activeWorkspaceID), BigInt(taskId), taskState],
+			});
+
+			await sendTransaction(transaction, {
+				onSuccess: async (result) => {
+					console.log("ThirdWeb reported success:", result);
+
+					// Try to get the actual transaction receipt
+					try {
+						if (result.transactionHash) {
+							console.log("Transaction hash:", result.transactionHash);
+
+							// Wait a bit for the transaction to be mined
+							setTimeout(async () => {
+								try {
+									const receipt = await waitForReceipt({
+										client,
+										chain: hederaTestnet,
+										transactionHash: result.transactionHash,
+									});
+									console.log("Actual transaction receipt:", receipt);
+
+									if (receipt.status === "success") {
+										toast.success("Task status updated successfully!", { id: toastId });
+									} else {
+										console.log("Task State Update Transaction failed on blockchain");
+										toast.error("Task State Update Transaction failed on blockchain", { id: toastId });
+									}
+								} catch (receiptError) {
+									console.error("Error getting receipt:", receiptError);
+									toast.error("Transaction status unclear", { id: toastId });
+								}
+							}, 3000); // Wait 3 seconds for mining
+						}
+					} catch (error) {
+						console.error("Error processing transaction result:", error);
+					}
+				},
+			});
+		} catch (error) {
+			toast.error((error as Error).message || "Transaction failed.", {
+				id: toastId,
+				position: "top-right",
+			});
+			toast.dismiss(toastId);
+			setIsSubmitting(false);
+		}
+	};
+
 	return (
 		<>
 			<Drawer
@@ -189,9 +278,27 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 						<div className="flex items-center gap-3">
 							<User className="h-4 w-4 text-muted-foreground" />
 							<span className="text-muted-foreground text-sm">Assignee</span>
-							<div className="flex items-center gap-2">
-								<Address address={task?.assignees?.[0] ?? ""} />
-								{task?.assignees && task.assignees.length > 1 && <span> + {task.assignees.length ?? 0}</span>}
+							<div className="flex items-center gap-2 cursor-pointer">
+								<Popover>
+									<PopoverTrigger>
+										<div className="flex gap-2 items-center">
+											<Address address={task?.assignees?.[0] ?? ""} />
+											<div className="cursor-pointer">{task?.assignees && task.assignees.length > 1 && <span> + {task.assignees.length - 1}</span>}</div>
+										</div>
+									</PopoverTrigger>
+									<PopoverContent className="w-[170px] p-2 mt-4 left-0 ">
+										<div className="flex flex-col gap-1">
+											{task?.assignees?.map((assignee, i) => (
+												<div
+													key={i}
+													className="flex items-center gap-2">
+													<Address address={assignee} />
+													{account?.address === assignee && <Check className="h-4 w-4 text-green-600" />}
+												</div>
+											))}
+										</div>
+									</PopoverContent>
+								</Popover>
 								{/* <p>
 									{task?.assignees.length}
 								</p> */}
@@ -229,8 +336,51 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							<CheckCircle2 className="h-4 w-4 text-muted-foreground" />
 							<span className="text-muted-foreground text-sm">Status</span>
 							<div className="flex items-center gap-3">
-								<span className="text-green-600 font-medium">{statusLabel.toUpperCase()}</span>
-								<span className="text-green-600 font-medium">{task ? (task.taskState === 0 ? 0 : task.taskState === 3 ? 50 : 100) : 0}%</span>
+								{canChangeStatus ? (
+									<Popover>
+										<PopoverTrigger>
+											<div className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5", statusConfig[status].bg, statusConfig[status].class)}>
+												<div className="flex gap-2">
+													{React.createElement(statusConfig[status].icon, { className: "w-3.5 h-3.5" })}
+													{statusLabel}
+												</div>
+												<ChevronDown className="h-4 w-4 ml-2" />
+											</div>
+										</PopoverTrigger>
+
+										<PopoverContent className="w-[170px] p-3 rounded-2xl">
+											<div className="flex flex-col gap-1">
+												{Object.entries(statusConfig)
+													.filter(([key]) => {
+														if (!isTaskOwner) {
+															return key !== "completed";
+														}
+														return true; // Show all options for task owners
+													})
+													.map(([key, config]) => {
+														return (
+															<div
+																key={key}
+																onClick={() => {
+																	if (task) {
+																		handleStatusChange(task?.id, key as unknown as Status);
+																	}
+																}}
+																className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>
+																{React.createElement(config.icon, { className: "w-3.5 h-3.5" })}
+																{key.charAt(0).toUpperCase() + key.slice(1).replace("-", " ")}
+															</div>
+														);
+													})}
+											</div>
+										</PopoverContent>
+									</Popover>
+								) : (
+									<div className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5", statusConfig[status].bg, statusConfig[status].class)}>
+										{React.createElement(statusConfig[status].icon, { className: "w-3.5 h-3.5" })}
+										{statusLabel}
+									</div>
+								)}
 							</div>
 						</div>
 

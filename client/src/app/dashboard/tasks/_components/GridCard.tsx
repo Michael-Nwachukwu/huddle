@@ -1,7 +1,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Calendar, ArrowRight, CheckCircle2, Timer, AlertCircle, ChevronUp, ChevronsUp } from "lucide-react";
+import { Calendar, ArrowRight, CheckCircle2, Timer, AlertCircle, ChevronUp, ChevronsUp, UserCheck, Archive } from "lucide-react";
 import Image from "next/image";
 import { useMultipleAssigneesClaimStatus } from "@/hooks/use-fetch-tasks";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ const iconStyles = {
 	low: "bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100",
 } as const;
 
-const statusConfig = {
+export const statusConfig = {
 	pending: {
 		icon: Timer,
 		class: "text-amber-600 dark:text-amber-400",
@@ -31,21 +31,32 @@ const statusConfig = {
 		class: "text-blue-600 dark:text-blue-400",
 		bg: "bg-blue-100 dark:bg-blue-900/30",
 	},
+	assigneeDone: {
+		icon: UserCheck,
+		class: "text-purple-600 dark:text-purple-400",
+		bg: "bg-purple-100 dark:bg-purple-900/30",
+	},
 	completed: {
 		icon: CheckCircle2,
 		class: "text-emerald-600 dark:text-emerald-400",
 		bg: "bg-emerald-100 dark:bg-emerald-900/30",
 	},
+	archived: {
+		icon: Archive,
+		class: "text-gray-600 dark:text-gray-400",
+		bg: "bg-gray-100 dark:bg-gray-900/30",
+	},
 } as const;
 
-type StatusKey = keyof typeof statusConfig;
+export type StatusKey = keyof typeof statusConfig;
 
 function getStatusFromState(taskState: number): StatusKey {
-	// 0: pending, 1: in-progress, 2: completed, 3: completed (closed)
+	// 0: pending, 1: completed, 2: archived, 3: in-progress, 4: assigneeDone
 	if (taskState === 0) return "pending";
+	if (taskState === 1) return "completed";
+	if (taskState === 2) return "archived";
 	if (taskState === 3) return "in-progress";
-	// if (taskState === 1) return "completed";
-	return "completed";
+	return "assigneeDone";
 }
 
 function getPriorityStyle(priority: number): keyof typeof iconStyles {
@@ -71,7 +82,7 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 	const priorityStyle = iconStyles[getPriorityStyle(item.priority)];
 	const formattedDate = `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`; // `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 	const amountText = item.isRewarded ? `${item.reward}${item.isPaymentNative ? "" : ""}` : undefined;
-	const progressPercent = status === "in-progress" ? 50 : status === "completed" ? 100 : 0;
+	const progressPercent = status === "in-progress" ? 50 : status === "assigneeDone" ? 75 : status === "completed" ? 100 : status === "archived" ? 0 : 0;
 
 	// Get current user's claim status
 	const currentUserStatus = claimData.getCurrentUserStatus();
@@ -158,7 +169,7 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 						onViewDetails?.(item);
 						setIsOpen(true);
 					}}
-					className={cn("w-full flex items-center justify-center gap-2", "py-2.5 px-3", "text-xs font-medium", "text-zinc-600 dark:text-zinc-400", "hover:text-zinc-900 dark:hover:text-zinc-100", "hover:bg-zinc-100 dark:hover:bg-zinc-800/50", "transition-colors duration-200")}>
+					className={cn("w-full flex items-center justify-center gap-2", "py-2.5 px-3", "text-xs font-medium", "text-zinc-600 dark:text-zinc-400", "hover:text-zinc-900 dark:hover:text-zinc-100", "hover:bg-zinc-100 dark:hover:bg-zinc-800/50 cursor-pointer", "transition-colors duration-200")}>
 					View Details
 					<ArrowRight className="w-3.5 h-3.5" />
 				</button>

@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Search, Timer, CirclePlus } from "lucide-react";
 
-// import { extendedTasks } from "./extended-tasks"; // not used
 import ViewToolbar from "./_components/view-toolbar";
 import TableView from "./_components/table-view";
 import GridView from "./_components/grid-view";
@@ -31,7 +30,7 @@ export default function Page() {
 	const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 	const [assignedToMe, setAssignedToMe] = useState(false);
 	const [sortBy, setSortBy] = useState<SortOption>("newest");
-	const [statusFilter, setStatusFilter] = useState<Status>(Status.Pending);
+	const [statusFilter, setStatusFilter] = useState<Status>(Status.All);
 	const [priorityFilter, setPriorityFilter] = useState<"All" | "Low" | "Medium" | "High">("All");
 
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
@@ -159,7 +158,6 @@ export default function Page() {
 										className="bg-transparent border-dashed border-gray-200 dark:border-gray-700">
 										<CirclePlus />
 										Priority
-										{/* <ChevronDown className="ml-2 h-4 w-4" /> */}
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
@@ -172,10 +170,7 @@ export default function Page() {
 								</DropdownMenuContent>
 							</DropdownMenu>
 						</div>
-						{
-							activeWorkspace?.owner === account?.address && <CreateTaskDrawer />
-						}
-						{/* <CreateTaskDrawer /> */}
+						{activeWorkspace?.owner === account?.address && <CreateTaskDrawer />}
 					</div>
 
 					<ViewToolbar

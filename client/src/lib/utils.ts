@@ -22,7 +22,7 @@ export const formatHederaTokenAmount = (amount?: bigint, decimals: number = 18):
 export function useNormalizedTasks(tasks: TaskView[]): NormalizedTask[] {
 	return useMemo(() => {
 		return tasks.map((task) => {
-			const statusLabel = task.taskState === 0 ? "Pending" : task.taskState === 3 ? "In Progress" : "Completed";
+			const statusLabel = task.taskState === 0 ? "Pending" : task.taskState === 1 ? "Completed" : task.taskState === 2 ? "Archived" : task.taskState === 3 ? "In Progress" : "Assignee Done";
 			const priorityLabel = task.priority === 0 ? "Low" : task.priority === 1 ? "Medium" : "High";
 			return {
 				// coerce bigint fields for UI typing compatibility
