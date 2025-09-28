@@ -27,6 +27,24 @@ import { statusConfig, type StatusKey } from "@/app/dashboard/tasks/_components/
 import { markAsABI } from "@/lib/tasksABI";
 import { Status } from "@/utils/types";
 
+// Mapping function to convert StatusKey to Status enum
+const statusKeyToStatus = (statusKey: StatusKey): Status => {
+	switch (statusKey) {
+		case "pending":
+			return Status.Pending;
+		case "in-progress":
+			return Status.InProgress;
+		case "assigneeDone":
+			return Status.InProgress; // Assuming assigneeDone maps to InProgress
+		case "completed":
+			return Status.Completed;
+		case "archived":
+			return Status.Pending; // Assuming archived maps to Pending, adjust as needed
+		default:
+			return Status.Pending;
+	}
+};
+
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
 	const [fileRetrieveStatus, setFileRetrieveStatus] = useState<string>("");
 	const [retrieving, setRetrieving] = useState(false);
@@ -442,7 +460,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 																key={key}
 																onClick={() => {
 																	if (task) {
-																		handleStatusChange(task?.id, key as unknown as Status);
+																		handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
 																	}
 																}}
 																className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>

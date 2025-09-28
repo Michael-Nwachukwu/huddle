@@ -13,7 +13,7 @@ import { client } from "../../../../../client";
 import { hederaTestnet } from "@/utils/chains";
 import { toast } from "sonner";
 import { Status } from "@/utils/types";
-import { statusConfig } from "@/app/dashboard/tasks/_components/GridCard";
+import { statusConfig, StatusKey } from "@/app/dashboard/tasks/_components/GridCard";
 import { cn } from "@/lib/utils";
 
 import { TypeSafeTaskView, NormalizedTask } from "@/utils/types";
@@ -25,6 +25,24 @@ const statusIcons = {
 	Completed: CheckCircle,
 	Archived: Archive,
 } as const;
+
+// Mapping function to convert StatusKey to Status enum
+const statusKeyToStatus = (statusKey: StatusKey): Status => {
+	switch (statusKey) {
+		case "pending":
+			return Status.Pending;
+		case "in-progress":
+			return Status.InProgress;
+		case "assigneeDone":
+			return Status.InProgress; // Assuming assigneeDone maps to InProgress
+		case "completed":
+			return Status.Completed;
+		case "archived":
+			return Status.Pending; // Assuming archived maps to Pending, adjust as needed
+		default:
+			return Status.Pending;
+	}
+};
 
 // const statusLabel = useMemo(() => {
 // 	if (!task) return "";
@@ -227,7 +245,7 @@ const TableView: React.FC<TableViewProps> = ({ filteredTasks, setIsOpen, setSele
 																					key={key}
 																					onClick={() => {
 																						if (task) {
-																							handleStatusChange(task?.id, key as unknown as Status);
+																							handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
 																						}
 																					}}
 																					className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>
