@@ -35,7 +35,7 @@ export default function Page() {
 
 	// Pagination state
 	const [currentPage, setCurrentPage] = useState(0);
-	const [pageSize, setPageSize] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
 
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const account = useActiveAccount();
