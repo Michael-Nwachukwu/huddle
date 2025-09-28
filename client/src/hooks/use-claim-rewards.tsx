@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { extractRevertReason } from "@/lib/utils";
+import React, { useCallback, useMemo } from "react";
+import { extractRevertReason, StatusKey } from "@/lib/utils";
 import { useSendTransaction } from "thirdweb/react";
 import { prepareContractCall, waitForReceipt } from "thirdweb";
 import { contract } from "@/lib/contract";
@@ -10,6 +10,14 @@ import { claimRewardABI } from "@/lib/tasksABI";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { decodeErrorResult } from "viem";
 import { abi } from "@/data/HuddleABI";
+import { TypeSafeTaskView } from "@/utils/types";
+
+interface BadgeInfo {
+	text: string;
+	variant: "default" | "secondary" | "outline" | "destructive";
+	className?: string;
+	clickable: boolean;
+}
 
 export const useClaimRewards = () => {
 	const { activeWorkspaceID } = useWorkspace();
@@ -97,3 +105,58 @@ export const useClaimRewards = () => {
 		isSubmittingClaimReward,
 	};
 };
+
+export const useTaskBadgeInfo = (task: TypeSafeTaskView, isCurrentUserAssignee: boolean, hasCurrentUserClaimed: boolean, claimData: any, status: StatusKey): BadgeInfo | null => {
+	return useMemo(() => {
+		const hasRewards = task.isRewarded && task.reward;
+
+		if (!hasRewards || status !== "completed") {
+			return null;
+		}
+
+		const { claimedCount, totalAssignees } = claimData;
+
+		// Define all possible badge states
+		const badges = {
+			claimable: {
+				text: "Claim Rewards",
+				variant: "outline" as const,
+				className: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 cursor-pointer",
+				clickable: true,
+			},
+			claimed: {
+				text: `Claimed (${claimedCount}/${totalAssignees})`,
+				variant: "default" as const,
+				clickable: false,
+			},
+			ready: {
+				text: "Ready to Claim",
+				variant: "outline" as const,
+				clickable: false,
+			},
+			allClaimed: {
+				text: "All Claimed",
+				variant: "default" as const,
+				clickable: false,
+			},
+			partiallyClaimed: {
+				text: `Claimed (${claimedCount}/${totalAssignees})`,
+				variant: "secondary" as const,
+				clickable: false,
+			},
+		};
+
+		// Logic for badge selection
+		if (isCurrentUserAssignee) {
+			return hasCurrentUserClaimed ? badges.claimed : badges.claimable;
+		}
+
+		// For non-assignees (observers)
+		if (claimedCount === 0) return badges.ready;
+		if (claimedCount === totalAssignees) return badges.allClaimed;
+		return badges.partiallyClaimed;
+	}, [task, isCurrentUserAssignee, hasCurrentUserClaimed, claimData, status]);
+};
+
+// Usage in component:
+// const badgeInfo = useTaskBadgeInfo(item, isCurrentUserAssignee, hasCurrentUserClaimed, claimData, status);

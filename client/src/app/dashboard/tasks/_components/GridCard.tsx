@@ -9,7 +9,7 @@ import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 import { useActiveAccount } from "thirdweb/react";
 
 import { statusConfig, StatusKey, getStatusFromState, getPriorityIcon, getPriorityStyle, iconStyles } from "@/lib/utils";
-import { useClaimRewards } from "@/hooks/use-claim-rewards";
+import { useClaimRewards, useTaskBadgeInfo } from "@/hooks/use-claim-rewards";
 
 interface GridCardProps {
 	item: TypeSafeTaskView;
@@ -37,63 +37,14 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 	// Get current user's claim status
 	const currentUserStatus = claimData.getCurrentUserStatus();
 	const isCurrentUserAssignee = !!currentUserStatus;
-	const hasCurrentUserClaimed = hasClaimed;
+	const hasCurrentUserClaimed = hasClaimed ?? false;
 
 	console.log("claim data", claimData);
 
 	const { handleClaimRewards } = useClaimRewards();
 
-	const badgeInfo = useMemo(() => {
-		// No rewards = no badges
-		if (!amountText) return null;
+	const badgeInfo = useTaskBadgeInfo(item, isCurrentUserAssignee, hasCurrentUserClaimed, claimData, status);
 
-		// Task not completed = no claim-related badges
-		if (status !== "completed") return null;
-
-		const hasRewards = !!amountText;
-		const totalAssignees = claimData.totalAssignees;
-		const claimedCount = claimData.claimedCount;
-		const allClaimed = claimedCount === totalAssignees && totalAssignees > 0;
-
-		// Current user is an assignee
-		if (isCurrentUserAssignee) {
-			if (hasCurrentUserClaimed) {
-				return {
-					type: "claimed" as const,
-					text: `Claimed (${claimedCount}/${totalAssignees})`,
-					variant: "default" as const,
-				};
-			} else {
-				return {
-					type: "claimable" as const,
-					text: "Claim Rewards",
-					variant: "outline" as const,
-					className: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50",
-				};
-			}
-		}
-
-		// Current user is NOT an assignee - show status for observers
-		if (claimedCount === 0) {
-			return {
-				type: "ready" as const,
-				text: "Ready to Claim",
-				variant: "outline" as const,
-			};
-		} else if (allClaimed) {
-			return {
-				type: "all-claimed" as const,
-				text: "All Claimed",
-				variant: "default" as const,
-			};
-		} else {
-			return {
-				type: "partially-claimed" as const,
-				text: `Claimed (${claimedCount}/${totalAssignees})`,
-				variant: "secondary" as const,
-			};
-		}
-	}, [amountText, status, isCurrentUserAssignee, hasCurrentUserClaimed, claimData.claimedCount, claimData.totalAssignees]);
 	return (
 		<Card className={cn("flex flex-col", "w-full h-full", "@container/card", "rounded-xl", "border border-zinc-100 dark:border-zinc-800", "hover:border-zinc-200 dark:hover:border-zinc-700", "transition-all duration-200", "shadow-sm backdrop-blur-xl", "p-0", className)}>
 			<div className="p-4 space-y-3">
@@ -145,8 +96,9 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 						{badgeInfo && (
 							<Badge
 								variant={badgeInfo.variant}
-								className={badgeInfo.className}
-								onClick={badgeInfo.type === "claimable" ? () => handleClaimRewards(item.id) : undefined}>
+								className={badgeInfo.className} // This handles the optional className properly
+								onClick={badgeInfo.clickable ? () => handleClaimRewards(item.id) : undefined}
+								style={{ cursor: badgeInfo.clickable ? "pointer" : "default" }}>
 								{badgeInfo.text}
 							</Badge>
 						)}
