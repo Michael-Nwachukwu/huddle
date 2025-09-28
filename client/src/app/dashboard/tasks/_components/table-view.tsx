@@ -13,10 +13,10 @@ import { client } from "../../../../../client";
 import { hederaTestnet } from "@/utils/chains";
 import { toast } from "sonner";
 import { Status } from "@/utils/types";
-import { statusConfig, StatusKey } from "@/app/dashboard/tasks/_components/GridCard";
-import { cn } from "@/lib/utils";
+import { cn, statusConfig, StatusKey, statusKeyToStatus } from "@/lib/utils";
 
 import { TypeSafeTaskView, NormalizedTask } from "@/utils/types";
+import { useStatusChange } from "@/hooks/use-status-change";
 
 const statusIcons = {
 	Pending: ListTodo,
@@ -25,34 +25,6 @@ const statusIcons = {
 	Completed: CheckCircle,
 	Archived: Archive,
 } as const;
-
-// Mapping function to convert StatusKey to Status enum
-const statusKeyToStatus = (statusKey: StatusKey): Status => {
-	switch (statusKey) {
-		case "pending":
-			return Status.Pending;
-		case "in-progress":
-			return Status.InProgress;
-		case "assigneeDone":
-			return Status.InProgress; // Assuming assigneeDone maps to InProgress
-		case "completed":
-			return Status.Completed;
-		case "archived":
-			return Status.Pending; // Assuming archived maps to Pending, adjust as needed
-		default:
-			return Status.Pending;
-	}
-};
-
-// const statusLabel = useMemo(() => {
-// 	if (!task) return "";
-// 	return task.taskState === 0 ? "Pending" : task.taskState === 3 ? "In Progress" : "Completed";
-// }, [task]);
-
-// const status: StatusKey = useMemo(() => {
-// 	if (!statusLabel) return "pending";
-// 	return statusLabel.toLowerCase().replace(/\s+/g, "-") as StatusKey;
-// }, [statusLabel]);
 
 const priorityIcons = {
 	Low: ArrowDown,
@@ -71,72 +43,73 @@ const TableView: React.FC<TableViewProps> = ({ filteredTasks, setIsOpen, setSele
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const { mutateAsync: sendTransaction } = useSendTransaction();
 	const account = useActiveAccount();
+	const { handleStatusChange } = useStatusChange();
 	// const handleStatusChange = async (task: NormalizedTask, taskState: Status) => {};
 
 	// Helper functions to check user permissions
 
-	const handleStatusChange = async (taskId: number, taskState: Status) => {
-		// e.preventDefault();
+	// const handleStatusChange = async (taskId: number, taskState: Status) => {
+	// 	// e.preventDefault();
 
-		if (isSubmitting) return;
+	// 	if (isSubmitting) return;
 
-		setIsSubmitting(true);
-		const toastId = toast.loading("Updating task status...", {
-			position: "top-right",
-		});
+	// 	setIsSubmitting(true);
+	// 	const toastId = toast.loading("Updating task status...", {
+	// 		position: "top-right",
+	// 	});
 
-		try {
-			const transaction = prepareContractCall({
-				contract,
-				method: markAsABI,
-				params: [BigInt(activeWorkspaceID), BigInt(taskId), taskState],
-			});
+	// 	try {
+	// 		const transaction = prepareContractCall({
+	// 			contract,
+	// 			method: markAsABI,
+	// 			params: [BigInt(activeWorkspaceID), BigInt(taskId), taskState],
+	// 		});
 
-			await sendTransaction(transaction, {
-				onSuccess: async (result) => {
-					console.log("ThirdWeb reported success:", result);
+	// 		await sendTransaction(transaction, {
+	// 			onSuccess: async (result) => {
+	// 				console.log("ThirdWeb reported success:", result);
 
-					// Try to get the actual transaction receipt
-					try {
-						if (result.transactionHash) {
-							console.log("Transaction hash:", result.transactionHash);
+	// 				// Try to get the actual transaction receipt
+	// 				try {
+	// 					if (result.transactionHash) {
+	// 						console.log("Transaction hash:", result.transactionHash);
 
-							// Wait a bit for the transaction to be mined
-							setTimeout(async () => {
-								try {
-									const receipt = await waitForReceipt({
-										client,
-										chain: hederaTestnet,
-										transactionHash: result.transactionHash,
-									});
-									console.log("Actual transaction receipt:", receipt);
+	// 						// Wait a bit for the transaction to be mined
+	// 						setTimeout(async () => {
+	// 							try {
+	// 								const receipt = await waitForReceipt({
+	// 									client,
+	// 									chain: hederaTestnet,
+	// 									transactionHash: result.transactionHash,
+	// 								});
+	// 								console.log("Actual transaction receipt:", receipt);
 
-									if (receipt.status === "success") {
-										toast.success("Task status updated successfully!", { id: toastId });
-									} else {
-										console.log("Task State Update Transaction failed on blockchain");
-										toast.error("Task State Update Transaction failed on blockchain", { id: toastId });
-									}
-								} catch (receiptError) {
-									console.error("Error getting receipt:", receiptError);
-									toast.error("Transaction status unclear", { id: toastId });
-								}
-							}, 3000); // Wait 3 seconds for mining
-						}
-					} catch (error) {
-						console.error("Error processing transaction result:", error);
-					}
-				},
-			});
-		} catch (error) {
-			toast.error((error as Error).message || "Transaction failed.", {
-				id: toastId,
-				position: "top-right",
-			});
-			toast.dismiss(toastId);
-			setIsSubmitting(false);
-		}
-	};
+	// 								if (receipt.status === "success") {
+	// 									toast.success("Task status updated successfully!", { id: toastId });
+	// 								} else {
+	// 									console.log("Task State Update Transaction failed on blockchain");
+	// 									toast.error("Task State Update Transaction failed on blockchain", { id: toastId });
+	// 								}
+	// 							} catch (receiptError) {
+	// 								console.error("Error getting receipt:", receiptError);
+	// 								toast.error("Transaction status unclear", { id: toastId });
+	// 							}
+	// 						}, 3000); // Wait 3 seconds for mining
+	// 					}
+	// 				} catch (error) {
+	// 					console.error("Error processing transaction result:", error);
+	// 				}
+	// 			},
+	// 		});
+	// 	} catch (error) {
+	// 		toast.error((error as Error).message || "Transaction failed.", {
+	// 			id: toastId,
+	// 			position: "top-right",
+	// 		});
+	// 		toast.dismiss(toastId);
+	// 		setIsSubmitting(false);
+	// 	}
+	// };
 	return (
 		<div className="rounded-md border">
 			<Table>
@@ -243,9 +216,9 @@ const TableView: React.FC<TableViewProps> = ({ filteredTasks, setIsOpen, setSele
 																				{key === task?._statusLabel && <Check className="h-4 w-4 text-green-600" />}
 																				<div
 																					key={key}
-																					onClick={() => {
+																					onClick={async () => {
 																						if (task) {
-																							handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
+																							await handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
 																						}
 																					}}
 																					className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>
