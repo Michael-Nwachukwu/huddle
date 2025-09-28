@@ -584,14 +584,6 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							</div>
 						</div>
 
-						{/* Progress Bar
-						<div className="ml-7">
-							<Progress
-								value={100}
-								className="h-2"
-							/>
-						</div> */}
-
 						{/* Description */}
 						<div className="space-y-2">
 							<div className="flex items-center gap-3">
@@ -699,7 +691,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 															<span className="text-xs text-gray-500">{formatTimestamp(msg.consensus_timestamp)}</span>
 														</div>
 
-														<Card className={cn("p-3 shadow-sm", isCurrentUser ? "bg-[#6b840a] text-white ml-auto" : "bg-white dark:bg-neutral-800")}>
+														<Card className={cn("p-3 shadow-sm max-w-fit", isCurrentUser ? "bg-[#6b840a] text-white ml-auto" : "bg-white dark:bg-neutral-800")}>
 															<p className="text-sm whitespace-pre-wrap break-words">{messageContent}</p>
 														</Card>
 													</div>
