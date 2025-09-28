@@ -5,8 +5,6 @@ import { Button } from "./ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2, Check, Download, Loader2 } from "lucide-react";
 import type { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 import Address from "./Address";
@@ -21,10 +19,8 @@ import { useSendTransaction, useActiveAccount } from "thirdweb/react";
 import { addTaskAssignee } from "@/lib/tasksABI";
 import { cn, extractRevertReason } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 
-import { statusConfig, type StatusKey, statusKeyToStatus } from "@/lib/utils";
-import { Status } from "@/utils/types";
+import { statusConfig, type StatusKey, statusKeyToStatus, getStatusFromState } from "@/lib/utils";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, RefreshCw, AlertCircle } from "lucide-react";
@@ -33,13 +29,7 @@ import { useHederaAccount } from "@/hooks/use-hedera-account";
 import { useStatusChange } from "@/hooks/use-status-change";
 import FileDetailsModal from "./file-details-modal";
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
-	const [retrievedFile, setRetrievedFile] = useState<{
-		fileId?: string;
-		contents?: string;
-		size?: number;
-	} | null>(null);
-
-	const { handleStatusChange, isSubmittingStatusChange } = useStatusChange();
+	const { handleStatusChange } = useStatusChange();
 
 	// Comment system state
 	const [comment, setComment] = useState("");
@@ -101,31 +91,15 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 		}
 	}, [isOpen]);
 
-	const statusLabel = useMemo(() => {
-		if (!task) return "";
-		return task.taskState === 0 ? "Pending" : task.taskState === 1 ? "Completed" : task.taskState === 2 ? "Archived" : task.taskState === 3 ? "In Progress" : "Assignee Done";
-	}, [task]);
-
 	const priorityLabel = useMemo(() => {
 		if (!task) return "";
 		return task.priority === 0 ? "Low" : task.priority === 1 ? "Medium" : "High";
 	}, [task]);
 
 	const status: StatusKey = useMemo(() => {
-		if (!statusLabel) return "pending";
-
-		// Create a direct mapping to match your statusConfig keys
-		const statusMap: Record<string, StatusKey> = {
-			pending: "pending",
-			completed: "completed",
-			archived: "archived",
-			"in progress": "in-progress",
-			"assignee done": "assigneeDone", // This is the key fix!
-		};
-
-		const normalizedLabel = statusLabel.toLowerCase();
-		return statusMap[normalizedLabel] || "pending";
-	}, [statusLabel]);
+		if (!task) return "pending";
+		return getStatusFromState(task.taskState);
+	}, [task]);
 
 	const handlePostComment = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -420,7 +394,8 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 											<div className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5", statusConfig[status].bg, statusConfig[status].class)}>
 												<div className="flex gap-2">
 													{React.createElement(statusConfig[status].icon, { className: "w-3.5 h-3.5" })}
-													{statusLabel}
+													{/* {statusLabel} */}
+													{status.charAt(0).toUpperCase() + status.slice(1)}
 												</div>
 												<ChevronDown className="h-4 w-4 ml-2" />
 											</div>
@@ -456,7 +431,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 								) : (
 									<div className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5", statusConfig[status].bg, statusConfig[status].class)}>
 										{React.createElement(statusConfig[status].icon, { className: "w-3.5 h-3.5" })}
-										{statusLabel}
+										{status.charAt(0).toUpperCase() + status.slice(1)}
 									</div>
 								)}
 							</div>
