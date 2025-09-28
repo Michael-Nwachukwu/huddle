@@ -329,7 +329,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							</DrawerClose>
 						</div>
 					</DrawerHeader>
-					<DrawerTitle className="text-xl font-semibold text-center py-4">{task?.title ?? "Task Details"}</DrawerTitle>
+					<DrawerTitle className="text-2xl font-semibold text-left py-4 ml-6">{task?.title ?? "Task Details"}</DrawerTitle>
 
 					<div className="flex-1 overflow-y-auto p-6 space-y-6">
 						{/* Priority */}
@@ -378,35 +378,35 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 										</div>
 									</PopoverContent>
 								</Popover>
-								{/* <p>
-									{task?.assignees.length}
-								</p> */}
-								<DropdownMenu
-									open={isAddMemberOpen}
-									onOpenChange={setIsAddMemberOpen}>
-									<DropdownMenuTrigger asChild>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-8 w-8 border-2 border-dashed border-muted hover:border-border rounded-full">
-											<Plus className="h-4 w-4 text-muted-foreground" />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent
-										align="end"
-										className="w-56">
-										{teamMembers?.map((member, i) => (
-											<DropdownMenuItem
-												key={i}
-												onClick={() => handleAddMember(member.user.toString())}
-												className="cursor-pointer">
-												<div className="flex items-center gap-3">
-													<Address address={member.user} />
-												</div>
-											</DropdownMenuItem>
-										))}
-									</DropdownMenuContent>
-								</DropdownMenu>
+
+								{isTaskOwner && (
+									<DropdownMenu
+										open={isAddMemberOpen}
+										onOpenChange={setIsAddMemberOpen}>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 border-2 border-dashed border-muted hover:border-border rounded-full">
+												<Plus className="h-4 w-4 text-muted-foreground" />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56">
+											{teamMembers?.map((member, i) => (
+												<DropdownMenuItem
+													key={i}
+													onClick={() => handleAddMember(member.user.toString())}
+													className="cursor-pointer">
+													<div className="flex items-center gap-3">
+														<Address address={member.user} />
+													</div>
+												</DropdownMenuItem>
+											))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+								)}
 							</div>
 						</div>
 
