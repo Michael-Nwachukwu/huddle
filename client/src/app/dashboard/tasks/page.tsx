@@ -33,10 +33,14 @@ export default function Page() {
 	const [statusFilter, setStatusFilter] = useState<Status>(Status.All);
 	const [priorityFilter, setPriorityFilter] = useState<"All" | "Low" | "Medium" | "High">("All");
 
+	// Pagination state
+	const [currentPage, setCurrentPage] = useState(0);
+	const [pageSize, setPageSize] = useState(10);
+
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const account = useActiveAccount();
 
-	const { tasks } = useFetchTasks(activeWorkspaceID, 0, 12, assignedToMe, statusFilter);
+	const { tasks, totalTasks, totalPages, hasNextPage, hasPreviousPage, isLoading } = useFetchTasks(activeWorkspaceID, currentPage, pageSize, assignedToMe, statusFilter);
 	console.log("tasks", tasks);
 
 	const handleStatusChange = (status: string | Status) => {
@@ -63,13 +67,38 @@ export default function Page() {
 		}
 		if (nextStatus !== null) {
 			setStatusFilter(nextStatus);
+			setCurrentPage(0); // Reset to first page when changing status filter
 		}
 	};
 
 	const handlePriorityChange = (priority: string) => {
 		if (priority === "All" || priority === "Low" || priority === "Medium" || priority === "High") {
 			setPriorityFilter(priority);
+			setCurrentPage(0); // Reset to first page when changing priority filter
 		}
+	};
+
+	// Pagination handlers
+	const handlePageSizeChange = (newPageSize: number) => {
+		setPageSize(newPageSize);
+		setCurrentPage(0); // Reset to first page when changing page size
+	};
+
+	const handlePreviousPage = () => {
+		if (hasPreviousPage) {
+			setCurrentPage((prev) => prev - 1);
+		}
+	};
+
+	const handleNextPage = () => {
+		if (hasNextPage) {
+			setCurrentPage((prev) => prev + 1);
+		}
+	};
+
+	const handleAssignedToMeChange = (value: boolean) => {
+		setAssignedToMe(value);
+		setCurrentPage(0); // Reset to first page when changing assigned to me filter
 	};
 
 	const normalizedTasks = useNormalizedTasks(tasks);
@@ -126,7 +155,10 @@ export default function Page() {
 								<Input
 									placeholder="Filter tasks..."
 									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
+									onChange={(e) => {
+										setSearchQuery(e.target.value);
+										setCurrentPage(0); // Reset to first page when searching
+									}}
 									className="pl-8 w-full sm:w-[250px]"
 								/>
 							</div>
@@ -177,7 +209,7 @@ export default function Page() {
 						viewMode={viewMode}
 						setViewMode={setViewMode}
 						assignedToMe={assignedToMe}
-						setAssignedToMe={setAssignedToMe}
+						setAssignedToMe={handleAssignedToMeChange}
 						sortBy={sortBy}
 						setSortBy={setSortBy}
 						onStatusChange={handleStatusChange}
@@ -201,7 +233,7 @@ export default function Page() {
 
 					{/* pagination section */}
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2">
-						<div className="flex-1 text-sm text-muted-foreground">0 of {sortedTasks.length} row(s) selected.</div>
+						<div className="flex-1 text-sm text-muted-foreground">{isLoading ? "Loading..." : `Showing ${sortedTasks.length} of ${Number(totalTasks)} task(s)`}</div>
 						<div className="flex flex-wrap items-center gap-3 sm:gap-6 lg:gap-8">
 							<div className="flex items-center gap-2">
 								<p className="text-sm font-medium">Rows per page</p>
@@ -210,29 +242,34 @@ export default function Page() {
 										<Button
 											variant="outline"
 											className="h-8 w-[70px] bg-transparent">
-											10 <ChevronDown className="ml-2 h-4 w-4" />
+											{pageSize} <ChevronDown className="ml-2 h-4 w-4" />
 										</Button>
 									</DropdownMenuTrigger>
 									<DropdownMenuContent align="end">
-										<DropdownMenuItem>10</DropdownMenuItem>
-										<DropdownMenuItem>20</DropdownMenuItem>
-										<DropdownMenuItem>30</DropdownMenuItem>
-										<DropdownMenuItem>40</DropdownMenuItem>
-										<DropdownMenuItem>50</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePageSizeChange(10)}>10</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePageSizeChange(20)}>20</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePageSizeChange(30)}>30</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePageSizeChange(40)}>40</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePageSizeChange(50)}>50</DropdownMenuItem>
 									</DropdownMenuContent>
 								</DropdownMenu>
 							</div>
-							<div className="flex w-full sm:w-[100px] items-center justify-center text-sm font-medium">Page 1 of 4</div>
+							<div className="flex w-full sm:w-[100px] items-center justify-center text-sm font-medium">
+								Page {currentPage + 1} of {Number(totalPages) || 1}
+							</div>
 							<div className="flex items-center space-x-2">
 								<Button
 									variant="outline"
 									className="h-8 w-8 p-0 bg-transparent"
-									disabled>
+									disabled={!hasPreviousPage || isLoading}
+									onClick={handlePreviousPage}>
 									<span className="sr-only">Go to previous page</span>←
 								</Button>
 								<Button
 									variant="outline"
-									className="h-8 w-8 p-0 bg-transparent">
+									className="h-8 w-8 p-0 bg-transparent"
+									disabled={!hasNextPage || isLoading}
+									onClick={handleNextPage}>
 									<span className="sr-only">Go to next page</span>→
 								</Button>
 							</div>
