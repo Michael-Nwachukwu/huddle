@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Calendar, ArrowRight } from "lucide-react";
@@ -42,6 +42,58 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 	console.log("claim data", claimData);
 
 	const { handleClaimRewards } = useClaimRewards();
+
+	const badgeInfo = useMemo(() => {
+		// No rewards = no badges
+		if (!amountText) return null;
+
+		// Task not completed = no claim-related badges
+		if (status !== "completed") return null;
+
+		const hasRewards = !!amountText;
+		const totalAssignees = claimData.totalAssignees;
+		const claimedCount = claimData.claimedCount;
+		const allClaimed = claimedCount === totalAssignees && totalAssignees > 0;
+
+		// Current user is an assignee
+		if (isCurrentUserAssignee) {
+			if (hasCurrentUserClaimed) {
+				return {
+					type: "claimed" as const,
+					text: `Claimed (${claimedCount}/${totalAssignees})`,
+					variant: "default" as const,
+				};
+			} else {
+				return {
+					type: "claimable" as const,
+					text: "Claim Rewards",
+					variant: "outline" as const,
+					className: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-900/50",
+				};
+			}
+		}
+
+		// Current user is NOT an assignee - show status for observers
+		if (claimedCount === 0) {
+			return {
+				type: "ready" as const,
+				text: "Ready to Claim",
+				variant: "outline" as const,
+			};
+		} else if (allClaimed) {
+			return {
+				type: "all-claimed" as const,
+				text: "All Claimed",
+				variant: "default" as const,
+			};
+		} else {
+			return {
+				type: "partially-claimed" as const,
+				text: `Claimed (${claimedCount}/${totalAssignees})`,
+				variant: "secondary" as const,
+			};
+		}
+	}, [amountText, status, isCurrentUserAssignee, hasCurrentUserClaimed, claimData.claimedCount, claimData.totalAssignees]);
 	return (
 		<Card className={cn("flex flex-col", "w-full h-full", "@container/card", "rounded-xl", "border border-zinc-100 dark:border-zinc-800", "hover:border-zinc-200 dark:hover:border-zinc-700", "transition-all duration-200", "shadow-sm backdrop-blur-xl", "p-0", className)}>
 			<div className="p-4 space-y-3">
@@ -89,29 +141,13 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 					)}
 					<span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{amountText ?? "No reward"}</span>
 					{amountText && <span className="text-xs text-zinc-600 dark:text-zinc-400">reward</span>}
-					<div className="ml-auto flex gap-2">
-						{!isCurrentUserAssignee && status === "completed" && <Badge variant="outline">Ready to Claim</Badge>}
-						{/* Show claimed status if there are assignees and rewards */}
-						{claimData.totalAssignees > 0 && amountText && !isCurrentUserAssignee && claimData.claimedCount > 0 && (
-							<Badge>
-								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
-							</Badge>
-						)}
-
-						{/* Show claim rewards badge for current user only when task is completed */}
-						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && (
+					<div className="ml-auto">
+						{badgeInfo && (
 							<Badge
-								variant="outline"
-								className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40 cursor-pointer"
-								onClick={() => handleClaimRewards(item.id)}>
-								Claim Rewards
-							</Badge>
-						)}
-
-						{/* Show claim rewards badge for current user only when task is completed */}
-						{status === "completed" && isCurrentUserAssignee && hasCurrentUserClaimed && amountText && (
-							<Badge>
-								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
+								variant={badgeInfo.variant}
+								className={badgeInfo.className}
+								onClick={badgeInfo.type === "claimable" ? () => handleClaimRewards(item.id) : undefined}>
+								{badgeInfo.text}
 							</Badge>
 						)}
 					</div>
