@@ -229,3 +229,22 @@ export const markAsABI = {
 	stateMutability: "nonpayable",
 	type: "function",
 } as const;
+
+export const claimRewardABI = {
+	inputs: [
+		{
+			internalType: "uint256",
+			name: "_workspaceId",
+			type: "uint256",
+		},
+		{
+			internalType: "uint256",
+			name: "_taskId",
+			type: "uint256",
+		},
+	],
+	name: "claim",
+	outputs: [],
+	stateMutability: "nonpayable",
+	type: "function",
+} as const;

@@ -41,7 +41,7 @@ const statusKeyToStatus = (statusKey: StatusKey): Status => {
 		case "in-progress":
 			return Status.InProgress;
 		case "assigneeDone":
-			return Status.InProgress; // Assuming assigneeDone maps to InProgress
+			return Status.AssigneeDone; // Assuming assigneeDone maps to InProgress
 		case "completed":
 			return Status.Completed;
 		case "archived":
@@ -182,11 +182,20 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 	const formatTimestamp = (timestamp: string) => {
 		const [seconds] = timestamp.split(".");
 		const date = new Date(parseInt(seconds) * 1000);
-		return date.toLocaleTimeString([], {
-			hour: "2-digit",
-			minute: "2-digit",
-			second: "2-digit",
-		});
+
+		const day = date.getDate();
+		const month = date.toLocaleString("en-US", { month: "short" });
+		const year = date.getFullYear();
+
+		let hours = date.getHours();
+		const minutes = date.getMinutes().toString().padStart(2, "0");
+		const ampm = hours >= 12 ? "PM" : "AM";
+
+		hours = hours % 12;
+		hours = hours ? hours : 12; // 0 should be 12
+		const hoursStr = hours.toString().padStart(2, "0");
+
+		return `${day} ${month} ${year} at ${hoursStr}:${minutes} ${ampm}`;
 	};
 
 	const formatAccountId = (accountId: string) => {
@@ -450,7 +459,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							</DrawerClose>
 						</div>
 					</DrawerHeader>
-					<DrawerTitle className="text-2xl font-semibold text-left py-4 ml-6">{task?.title ?? "Task Details"}</DrawerTitle>
+					<DrawerTitle className="text-2xl font-semibold text-left py-4 ml-6 mr-4">{task?.title ?? "Task Details"}</DrawerTitle>
 
 					<div className="flex-1 overflow-y-auto p-6 space-y-6">
 						{/* Priority */}
@@ -636,7 +645,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 								</Button>
 							</div>
 
-							<div className="ml-7 space-y-4">
+							<div className=" space-y-4">
 								{/* Comments Area */}
 								<div className="max-h-96 overflow-y-auto space-y-4 pr-2">
 									{commentsError && (
@@ -681,8 +690,9 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 													className={isCurrentUser ? "flex gap-3 justify-end items-start" : "flex gap-3 items-start"}>
 													{!isCurrentUser && <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">{formatAccountId(msg.payer_account_id).slice(0, 2).toUpperCase()}</div>}
 
+													{isCurrentUser && <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">You</div>}
 													<div className="flex-1 min-w-0 max-w-md">
-														<div className={cn("flex items-center gap-2 mb-1", isCurrentUser ? "justify-end" : "justify-start")}>
+														<div className={cn("flex items-center gap-2 mb-1")}>
 															<Address
 																hideIcon={true}
 																accountId={displayName}
@@ -691,12 +701,10 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 															<span className="text-xs text-gray-500">{formatTimestamp(msg.consensus_timestamp)}</span>
 														</div>
 
-														<Card className={cn("p-3 shadow-sm max-w-fit", isCurrentUser ? "bg-[#6b840a] text-white ml-auto" : "bg-white dark:bg-neutral-800")}>
-															<p className="text-sm whitespace-pre-wrap break-words">{messageContent}</p>
-														</Card>
+														{/* <Card className={cn("p-3 shadow-sm max-w-fit")}> */}
+														<p className="text-sm whitespace-pre-wrap break-words text-stone-400">{messageContent}</p>
+														{/* </Card> */}
 													</div>
-
-													{isCurrentUser && <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">You</div>}
 												</div>
 											);
 										})
