@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Button } from "./ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,6 +26,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { statusConfig, type StatusKey } from "@/app/dashboard/tasks/_components/GridCard";
 import { markAsABI } from "@/lib/tasksABI";
 import { Status } from "@/utils/types";
+
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Send, RefreshCw, AlertCircle } from "lucide-react";
+import { useTopicMessages, decodeMessage } from "@/hooks/useTopicMessages";
+import { useHederaAccount } from "@/hooks/use-hedera-account";
 
 // Mapping function to convert StatusKey to Status enum
 const statusKeyToStatus = (statusKey: StatusKey): Status => {
@@ -54,6 +60,17 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 		size?: number;
 	} | null>(null);
 
+	// Comment system state
+	const [comment, setComment] = useState("");
+	const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+	const commentsEndRef = useRef<HTMLDivElement>(null);
+	const commentInputRef = useRef<HTMLInputElement>(null);
+
+	const account = useActiveAccount();
+	// Get Hedera account data for current user
+	const { data: hederaData } = useHederaAccount(account?.address || "");
+	const userAccountId = hederaData?.account || "";
+
 	// New state for file modal
 	const [isFileModalOpen, setIsFileModalOpen] = useState(false);
 
@@ -61,12 +78,47 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 	const { teamMembers } = useWorkspace(); // Access teamMembers from the useWorkspace();
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const { mutateAsync: sendTransaction } = useSendTransaction();
-	const account = useActiveAccount();
 
-	const [comment, setComment] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+
+	// Generate a topic ID based on task ID for comments
+	const commentTopicId = task?.topicId;
+
+	// Use the topic messages hook for comments
+	const {
+		messages: comments,
+		loading: commentsLoading,
+		error: commentsError,
+		refetch: refetchComments,
+	} = useTopicMessages(commentTopicId, {
+		limit: 50,
+		order: "desc",
+		refetchInterval: 3000,
+	});
+
+	// Memoize the reversed comments to show oldest first
+	const displayComments = useMemo(() => {
+		return [...comments].reverse();
+	}, [comments]);
+	// AvatarImage;
+
+	// Auto-scroll to bottom when new comments arrive
+	useEffect(() => {
+		if (commentsEndRef.current) {
+			commentsEndRef.current.scrollIntoView({ behavior: "smooth" });
+		}
+	}, [comments]);
+
+	// Focus comment input when drawer opens
+	useEffect(() => {
+		if (isOpen && commentInputRef.current) {
+			setTimeout(() => {
+				commentInputRef.current?.focus();
+			}, 300);
+		}
+	}, [isOpen]);
 
 	const statusLabel = useMemo(() => {
 		if (!task) return "";
@@ -83,11 +135,62 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 		return statusLabel.toLowerCase().replace(/\s+/g, "-") as StatusKey;
 	}, [statusLabel]);
 
-	const handlePostComment = () => {
-		if (comment.trim()) {
-			// Handle comment posting logic here
-			setComment("");
+	const handlePostComment = async (e: React.FormEvent) => {
+		e.preventDefault();
+
+		if (!comment.trim() || !commentTopicId || !userAccountId) {
+			if (!userAccountId) {
+				toast.error("Please connect your wallet to post comments");
+			}
+			return;
 		}
+
+		setIsSubmittingComment(true);
+
+		try {
+			const response = await fetch("/api/submit-message", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					topicId: commentTopicId,
+					message: userAccountId.trim() + ": " + comment.trim(),
+				}),
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to post comment");
+			}
+
+			setComment("");
+			setTimeout(() => {
+				refetchComments();
+			}, 2000);
+
+			toast.success("Comment posted successfully!");
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : "Failed to post comment";
+			toast.error(errorMessage);
+			console.error("Error posting comment:", error);
+		} finally {
+			setIsSubmittingComment(false);
+		}
+	};
+
+	const formatTimestamp = (timestamp: string) => {
+		const [seconds] = timestamp.split(".");
+		const date = new Date(parseInt(seconds) * 1000);
+		return date.toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+		});
+	};
+
+	const formatAccountId = (accountId: string) => {
+		return accountId.slice(-6);
 	};
 
 	const handleAddMember = async (memberAddress: string) => {
@@ -520,77 +623,129 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							</div>
 						</div>
 
-						{/* Comments */}
+						{/* new comment */}
 						<div className="space-y-4">
-							<div className="flex items-center gap-3">
-								<MessageSquare className="h-4 w-4 text-muted-foreground" />
-								<span className="text-muted-foreground text-sm">Comments</span>
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<MessageSquare className="h-4 w-4 text-muted-foreground" />
+									<span className="text-muted-foreground text-sm">Comments</span>
+									<span className="text-xs text-muted-foreground">
+										({comments.length} comment{comments.length !== 1 ? "s" : ""})
+									</span>
+								</div>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={refetchComments}
+									disabled={commentsLoading}
+									className="flex items-center gap-2 h-8">
+									<RefreshCw className={cn("h-3 w-3", commentsLoading && "animate-spin")} />
+									<span className="text-xs">Refresh</span>
+								</Button>
 							</div>
 
 							<div className="ml-7 space-y-4">
-								{/* Comment 1 */}
-								<div className="flex gap-3">
-									<Avatar className="h-8 w-8 mt-1">
-										<AvatarImage
-											src="/api/placeholder/32/32"
-											alt="Formula"
-										/>
-										<AvatarFallback className="bg-primary text-primary-foreground text-xs">F</AvatarFallback>
-									</Avatar>
-									<div className="flex-1">
-										<div className="flex items-center gap-2 mb-1">
-											<span className="text-foreground text-sm font-medium">formula</span>
-											<span className="text-muted-foreground text-xs">15 Aug 2025 at 09:01 PM</span>
+								{/* Comments Area */}
+								<div className="max-h-96 overflow-y-auto space-y-4 pr-2">
+									{commentsError && (
+										<div className="text-center text-red-500 p-4">
+											<AlertCircle className="mx-auto h-6 w-6 mb-2" />
+											<p className="text-sm">{commentsError}</p>
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={refetchComments}
+												className="mt-2 h-8 text-xs">
+												Try Again
+											</Button>
 										</div>
-										<p className="text-muted-foreground text-sm">Hello, please can i get more clarification on the task</p>
-									</div>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="text-muted-foreground hover:text-destructive">
-										<Trash2 className="h-4 w-4" />
-									</Button>
-								</div>
+									)}
 
-								{/* Comment 2 */}
-								<div className="flex gap-3">
-									<Avatar className="h-8 w-8 mt-1">
-										<AvatarImage
-											src="/api/placeholder/32/32"
-											alt="Okwy"
-										/>
-										<AvatarFallback className="bg-secondary text-secondary-foreground text-xs">O</AvatarFallback>
-									</Avatar>
-									<div className="flex-1">
-										<div className="flex items-center gap-2 mb-1">
-											<span className="text-foreground text-sm font-medium">okwy</span>
-											<span className="text-muted-foreground text-xs">15 Aug 2025 at 09:02 PM</span>
+									{commentsLoading && comments.length === 0 ? (
+										<div className="space-y-3">
+											{Array.from({ length: 3 }).map((_, i) => (
+												<div
+													key={i}
+													className="flex gap-3">
+													<Skeleton className="h-8 w-8 rounded-full" />
+													<div className="flex-1 space-y-2">
+														<Skeleton className="h-4 w-20" />
+														<Skeleton className="h-16 w-full" />
+													</div>
+												</div>
+											))}
 										</div>
-										<p className="text-muted-foreground text-sm">Ok i will send a link</p>
-									</div>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="text-muted-foreground hover:text-destructive">
-										<Trash2 className="h-4 w-4" />
-									</Button>
+									) : displayComments.length > 0 ? (
+										displayComments.map((msg) => {
+											const decoded = decodeMessage(msg.message);
+											const [rawDisplayName, rawMessage] = decoded.split(/:(.+)/);
+											const displayName = rawDisplayName?.trim() || msg.payer_account_id;
+											const messageContent = rawMessage?.trim() || decoded;
+											const isCurrentUser = userAccountId === displayName;
+
+											return (
+												<div
+													key={`${msg.consensus_timestamp}-${msg.sequence_number}`}
+													className={isCurrentUser ? "flex gap-3 justify-end items-start" : "flex gap-3 items-start"}>
+													{!isCurrentUser && <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">{formatAccountId(msg.payer_account_id).slice(0, 2).toUpperCase()}</div>}
+
+													<div className="flex-1 min-w-0 max-w-md">
+														<div className={cn("flex items-center gap-2 mb-1", isCurrentUser ? "justify-end" : "justify-start")}>
+															<Address
+																hideIcon={true}
+																accountId={displayName}
+																hideAccountId={true}
+															/>
+															<span className="text-xs text-gray-500">{formatTimestamp(msg.consensus_timestamp)}</span>
+														</div>
+
+														<Card className={cn("p-3 shadow-sm", isCurrentUser ? "bg-[#6b840a] text-white ml-auto" : "bg-white dark:bg-neutral-800")}>
+															<p className="text-sm whitespace-pre-wrap break-words">{messageContent}</p>
+														</Card>
+													</div>
+
+													{isCurrentUser && <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">You</div>}
+												</div>
+											);
+										})
+									) : (
+										<div className="text-center py-8 text-muted-foreground">
+											<MessageSquare className="mx-auto h-8 w-8 mb-2 opacity-50" />
+											<p className="text-sm">No comments yet. Be the first to comment!</p>
+										</div>
+									)}
+
+									<div ref={commentsEndRef} />
 								</div>
 
 								{/* Comment Input */}
-								<div className="flex gap-3 pt-2">
-									<Input
-										placeholder="Write a comment..."
-										value={comment}
-										onChange={(e) => setComment(e.target.value)}
-										className="flex-1"
-										onKeyPress={(e) => {
-											if (e.key === "Enter" && !e.shiftKey) {
-												e.preventDefault();
-												handlePostComment();
-											}
-										}}
-									/>
-									<Button onClick={handlePostComment}>Post</Button>
+								<div className="pt-4 border-t">
+									<form
+										onSubmit={handlePostComment}
+										className="flex gap-2 items-center">
+										<Input
+											ref={commentInputRef}
+											value={comment}
+											onChange={(e) => setComment(e.target.value)}
+											placeholder="Write a comment..."
+											disabled={isSubmittingComment || !userAccountId}
+											className="flex-1 h-10"
+											maxLength={1024}
+										/>
+										<Button
+											type="submit"
+											disabled={isSubmittingComment || !comment.trim() || !userAccountId}
+											className="flex items-center gap-2 h-10"
+											size="sm">
+											<Send className="h-3 w-3" />
+											{isSubmittingComment ? "Posting..." : "Post"}
+										</Button>
+									</form>
+
+									<div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+										<span>{comment.length}/1024 characters</span>
+										<span>Comments are stored on Hedera Consensus Service</span>
+									</div>
 								</div>
 							</div>
 						</div>
