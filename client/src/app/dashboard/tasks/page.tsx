@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Search, Timer, CirclePlus } from "lucide-react";
+import { ChevronDown, Search, Timer, CirclePlus, X } from "lucide-react";
 
 import ViewToolbar from "./_components/view-toolbar";
 import TableView from "./_components/table-view";
@@ -42,6 +42,27 @@ export default function Page() {
 
 	const { tasks, totalTasks, totalPages, hasNextPage, hasPreviousPage, isLoading } = useFetchTasks(activeWorkspaceID, currentPage, pageSize, assignedToMe, statusFilter);
 	console.log("tasks", tasks);
+
+	const getStatusLabel = (status: Status): string => {
+		switch (status) {
+			case Status.Pending:
+				return "Pending";
+			case Status.InProgress:
+				return "In Progress";
+			case Status.Completed:
+				return "Completed";
+			case Status.Archived:
+				return "Archived";
+			case Status.AssigneeDone:
+				return "Assignee Done";
+			default:
+				return "All";
+		}
+	};
+
+	const getPriorityLabel = (priority: "All" | "Low" | "Medium" | "High"): string => {
+		return priority;
+	};
 
 	const handleStatusChange = (status: string | Status) => {
 		let nextStatus: Status | null = null;
@@ -183,6 +204,21 @@ export default function Page() {
 									<DropdownMenuItem onClick={() => handleStatusChange(Status.Completed)}>Completed</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>
+							{statusFilter !== Status.All && (
+								<div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-1 h-9">
+									<span className="text-sm">{getStatusLabel(statusFilter)}</span>
+									<button
+										type="button"
+										aria-label="Clear status filter"
+										onClick={() => {
+											setStatusFilter(Status.All);
+											setCurrentPage(0);
+										}}
+										className="inline-flex items-center justify-center rounded hover:opacity-80">
+										<X className="h-4 w-4" />
+									</button>
+								</div>
+							)}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button
@@ -201,8 +237,40 @@ export default function Page() {
 									<DropdownMenuItem onClick={() => handlePriorityChange("High")}>High</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>
+							{priorityFilter !== "All" && (
+								<div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-1 h-9">
+									<span className="text-sm">{getPriorityLabel(priorityFilter)}</span>
+									<button
+										type="button"
+										aria-label="Clear priority filter"
+										onClick={() => {
+											setPriorityFilter("All");
+											setCurrentPage(0);
+										}}
+										className="inline-flex items-center justify-center rounded hover:opacity-80">
+										<X className="h-4 w-4" />
+									</button>
+								</div>
+							)}
 						</div>
-						{activeWorkspace?.owner === account?.address && <CreateTaskDrawer />}
+						<div className="flex items-center gap-4">
+							{(statusFilter !== Status.All || priorityFilter !== "All" || searchQuery.trim() !== "" || assignedToMe) && (
+								<button
+									type="button"
+									className="text-sm text-foreground/80 hover:underline inline-flex items-center gap-1"
+									onClick={() => {
+										setStatusFilter(Status.All);
+										setPriorityFilter("All");
+										setSearchQuery("");
+										setAssignedToMe(false);
+										setCurrentPage(0);
+									}}>
+									<span>Reset</span>
+									<X className="h-4 w-4" />
+								</button>
+							)}
+							{activeWorkspace?.owner === account?.address && <CreateTaskDrawer />}
+						</div>
 					</div>
 
 					<ViewToolbar
