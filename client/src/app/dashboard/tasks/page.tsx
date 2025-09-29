@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Search, Timer, CirclePlus, X } from "lucide-react";
@@ -123,6 +125,43 @@ export default function Page() {
 	};
 
 	const normalizedTasks = useNormalizedTasks(tasks);
+
+	const LoadingGrid = () => (
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+			{Array.from({ length: 6 }).map((_, idx) => (
+				<div
+					key={idx}
+					className="h-full">
+					<Card className="h-full p-4 space-y-3">
+						<Skeleton className="h-5 w-2/3" />
+						<Skeleton className="h-3 w-full" />
+						<Skeleton className="h-3 w-5/6" />
+						<div className="flex gap-2">
+							<Skeleton className="h-4 w-16" />
+							<Skeleton className="h-4 w-12" />
+						</div>
+					</Card>
+				</div>
+			))}
+		</div>
+	);
+
+	const LoadingTable = () => (
+		<div className="rounded-md border">
+			<div className="divide-y">
+				{Array.from({ length: 6 }).map((_, idx) => (
+					<div
+						key={idx}
+						className="grid grid-cols-4 gap-4 items-center p-4">
+						<Skeleton className="h-4 w-3/4" />
+						<Skeleton className="h-4 w-1/3" />
+						<Skeleton className="h-4 w-1/4" />
+						<Skeleton className="h-8 w-8 rounded" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
 
 	const filteredTasks = normalizedTasks.filter((task) => {
 		const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -284,8 +323,14 @@ export default function Page() {
 						onPriorityChange={handlePriorityChange}
 					/>
 
-					{/* table */}
-					{viewMode === "list" ? (
+					{/* table/grid */}
+					{isLoading ? (
+						viewMode === "list" ? (
+							<LoadingTable />
+						) : (
+							<LoadingGrid />
+						)
+					) : viewMode === "list" ? (
 						<TableView
 							filteredTasks={sortedTasks}
 							setIsOpen={setIsOpen}
@@ -301,7 +346,20 @@ export default function Page() {
 
 					{/* pagination section */}
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2">
-						<div className="flex-1 text-sm text-muted-foreground">{isLoading ? "Loading..." : `Showing ${sortedTasks.length} of ${Number(totalTasks)} task(s)`}</div>
+						<div className="flex-1 text-sm text-muted-foreground">
+							{isLoading ? (
+								<div className="flex items-center gap-2">
+									<span
+										className="inline-block h-4 w-4 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"
+										role="status"
+										aria-label="Loading"
+									/>
+									<span className="sr-only">Loading</span>
+								</div>
+							) : (
+								`Showing ${sortedTasks.length} of ${Number(totalTasks)} task(s)`
+							)}
+						</div>
 						<div className="flex flex-wrap items-center gap-3 sm:gap-6 lg:gap-8">
 							<div className="flex items-center gap-2">
 								<p className="text-sm font-medium">Rows per page</p>
