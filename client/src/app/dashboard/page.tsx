@@ -41,10 +41,10 @@ export default function Page() {
 			<div className="flex flex-1 flex-col items-center justify-center">
 				<div className="text-center">
 					<h2 className="text-xl font-semibold mb-2">No Workspaces Found</h2>
-					<p className="text-muted-foreground mb-4">
-						You don&apos;t have any workspaces yet. Create or join a workspace to get started.
-					</p>
-					<Link href={"/workspace/create"} className="px-4 py-2 bg-[#6b840a] dark:bg-[#caef35] text-primary-foreground rounded-md hover:bg-primary/90">
+					<p className="text-muted-foreground mb-4">You don&apos;t have any workspaces yet. Create or join a workspace to get started.</p>
+					<Link
+						href={"/workspace/create"}
+						className="px-4 py-2 bg-[#6b840a] dark:bg-[#caef35] text-primary-foreground rounded-md hover:bg-primary/90">
 						Create Workspace
 					</Link>
 				</div>

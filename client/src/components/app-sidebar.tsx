@@ -67,14 +67,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		],
 		tools: [
 			{
-				name: "Notepad",
-				url: "#",
-				icon: IconDatabase,
-			},
-			{
 				name: "Huddle AI",
 				url: "/dashboard/bot",
 				icon: IconReport,
+			},
+			{
+				name: "Notepad (coming soon)",
+				url: "#",
+				icon: IconDatabase,
 			},
 			{
 				name: "Agent (coming soon)",
