@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
-import { CalendarIcon, Upload, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, Upload, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,8 @@ const formSchema = z
 		title: z.string().min(2, "Title must be at least 2 characters").max(50, "Title must be less than 50 characters"),
 		description: z.string().min(2, "Description must be at least 2 characters").max(500, "Description must be less than 500 characters"),
 		priority: z.enum(["0", "1", "2"]),
-		assigned_to: z.string().min(1, "Please select an assignee"),
+		assigned_to: z.array(z.string()).min(1, "Please select at least one assignee"),
+		// assigned_to: z.string().min(1, "Please select at least one assignee"),
 		attachment: z.any().optional(),
 		token: z.string().optional(),
 		amount: z.string().optional(),
@@ -107,7 +108,7 @@ export default function CreateTaskForm() {
 			attachment: undefined,
 			token: "",
 			amount: "",
-			assigned_to: "",
+			assigned_to: [],
 			isRewarded: false,
 			priority: "0",
 			start_date: new Date(),
@@ -316,12 +317,14 @@ export default function CreateTaskForm() {
 			toast.loading("Preparing blockchain transaction...", { id: toastId });
 			setOperationStatus((prev) => ({ ...prev, contract: "executing" }));
 
-			const selectedMember = teamMembers?.find((m) => m.user.toString() === values.assigned_to);
-			if (!selectedMember) {
-				throw new Error("Selected assignee not found");
-			}
+			// const selectedMember = teamMembers?.find((m) => m.user.toString() === values.assigned_to);
+			// if (!selectedMember) {
+			// 	throw new Error("Selected assignee not found");
+			// }
 
-			const assignees = [selectedMember.user];
+			const assignees = values.assigned_to;
+			// const assignees = [selectedMember.user];
+
 			const isNativePayment = selectedToken?.symbol === "HBAR";
 			const grossReward = values.isRewarded ? toWei(values.amount || "0") : BigInt(0);
 
@@ -693,6 +696,8 @@ export default function CreateTaskForm() {
 
 					<div className="grid grid-cols-2 gap-2 sm:gap-4">
 						{/* Assign to */}
+						
+
 						<FormField
 							control={form.control}
 							name="assigned_to"
@@ -704,34 +709,60 @@ export default function CreateTaskForm() {
 										Assign to
 									</FormLabel>
 									<FormControl>
-										<Select
-											onValueChange={field.onChange}
-											value={field.value}>
-											<SelectTrigger className="border-zinc-600 dark:border-zinc-800 dark:text-slate-200 h-10 w-full">
-												<SelectValue placeholder="Select member">
-													{field.value &&
-														(() => {
-															const selectedMember = teamMembers?.find((m) => m?.user != null && m.user.toString() === field.value);
-															return selectedMember ? (
-																<div className="flex items-center gap-2">
-																	<Address address={selectedMember.user} />
-																</div>
-															) : null;
-														})()}
-												</SelectValue>
-											</SelectTrigger>
-											<SelectContent>
-												{teamMembers?.map((member, i) => (
-													<SelectItem
-														key={i}
-														value={member.user.toString()}>
-														<div className="flex items-center gap-3">
-															<Address address={member.user} />
+										<Popover>
+											<PopoverTrigger asChild>
+												<Button
+													variant="outline"
+													className="h-10 w-full text-left border-zinc-600 dark:border-zinc-800 dark:text-slate-200 bg-transparent flex justify-between items-center">
+													<span className="truncate">
+														{Array.isArray(field.value) && field.value.length > 0 ? (
+															<span>
+																<Address
+																	key={field.value[0]}
+																	address={field.value[0]}
+																/>
+																{field.value.length > 1 && ` + ${field.value.length - 1}`}
+															</span>
+														) : (
+															"Select members"
+														)}
+													</span>
+													<ChevronDown className="h-4 w-4 opacity-50" />
+												</Button>
+											</PopoverTrigger>
+											<PopoverContent
+												className="w-[240px] p-0 border-zinc-600 dark:border-zinc-800"
+												align="start">
+												<div className="p-2 max-h-[200px] overflow-y-auto">
+													{teamMembers?.map((member, i) => (
+														<div
+															key={i}
+															className="flex items-center space-x-2 p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded">
+															<Checkbox
+																id={`member-${i}`}
+																checked={Array.isArray(field.value) && field.value.includes(member.user.toString())}
+																onCheckedChange={(checked) => {
+																	const valueArray: string[] = Array.isArray(field.value) ? field.value : [];
+																	const memberId = member.user.toString();
+																	let newValue: string[];
+																	if (checked) {
+																		newValue = valueArray.includes(memberId) ? valueArray : [...valueArray, memberId];
+																	} else {
+																		newValue = valueArray.filter((addr: string) => addr !== memberId);
+																	}
+																	field.onChange(newValue);
+																}}
+															/>
+															<label
+																htmlFor={`member-${i}`}
+																className="text-sm text-stone-700 dark:text-slate-200">
+																<Address address={member.user} />
+															</label>
 														</div>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+													))}
+												</div>
+											</PopoverContent>
+										</Popover>
 									</FormControl>
 									<FormMessage />
 								</FormItem>
