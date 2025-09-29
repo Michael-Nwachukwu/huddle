@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2, Check, Download, Loader2 } from "lucide-react";
+import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2, Check, Download, Loader2, Trash } from "lucide-react";
 import type { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 import Address from "./Address";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -28,6 +28,8 @@ import { useTopicMessages, decodeMessage } from "@/hooks/useTopicMessages";
 import { useHederaAccount } from "@/hooks/use-hedera-account";
 import { useStatusChange } from "@/hooks/use-status-change";
 import FileDetailsModal from "./file-details-modal";
+import DeleteTaskDialog from "@/app/dashboard/tasks/_components/delete-task-dialog";
+import { useDeleteTask } from "@/hooks/use-delete-task";
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
 	const { handleStatusChange } = useStatusChange();
 
@@ -36,6 +38,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 	const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 	const commentsEndRef = useRef<HTMLDivElement>(null);
 	const commentInputRef = useRef<HTMLInputElement>(null);
+	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
 	const account = useActiveAccount();
 	// Get Hedera account data for current user
@@ -49,6 +52,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 	const { teamMembers } = useWorkspace(); // Access teamMembers from the useWorkspace();
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const { mutateAsync: sendTransaction } = useSendTransaction();
+	const { handleTaskDelete } = useDeleteTask();
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -289,8 +293,9 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							<Button
 								variant="ghost"
 								size="icon"
-								className="text-muted-foreground hover:text-foreground">
-								<MoreHorizontal className="h-4 w-4" />
+								className="text-muted-foreground hover:text-foreground"
+								onClick={() => setShowDeleteDialog(true)}>
+								<Trash className="h-4 w-4" />
 							</Button>
 							<DrawerClose>
 								<Button
@@ -601,6 +606,14 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 					</DrawerFooter>
 				</DrawerContent>
 			</Drawer>
+			{task && (
+				<DeleteTaskDialog
+					task={task}
+					open={showDeleteDialog}
+					onOpenChange={setShowDeleteDialog}
+					onConfirm={() => handleTaskDelete(task.id)}
+				/>
+			)}
 
 			{/* File Details Modal */}
 

@@ -248,3 +248,22 @@ export const claimRewardABI = {
 	stateMutability: "nonpayable",
 	type: "function",
 } as const;
+
+export const removeTaskABI = {
+	inputs: [
+		{
+			internalType: "uint256",
+			name: "_workspaceId",
+			type: "uint256",
+		},
+		{
+			internalType: "uint256",
+			name: "_taskId",
+			type: "uint256",
+		},
+	],
+	name: "removeTask",
+	outputs: [],
+	stateMutability: "nonpayable",
+	type: "function",
+} as const;

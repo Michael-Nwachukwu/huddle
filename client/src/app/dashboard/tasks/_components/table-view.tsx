@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import React from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,11 @@ import { useHasUserClaimedReward, useMultipleAssigneesClaimStatus } from "@/hook
 import { useClaimRewards } from "@/hooks/use-claim-rewards";
 import { useTaskBadgeInfo } from "@/hooks/use-claim-rewards"; // Import the hook
 import { Badge } from "@/components/ui/badge";
+
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useDeleteTask } from "@/hooks/use-delete-task";
+import { Status } from "@/utils/types";
+import DeleteTaskDialog from "./delete-task-dialog";
 
 const statusIcons = {
 	Pending: ListTodo,
@@ -58,33 +64,35 @@ const TableView: React.FC<TableViewProps> = ({ filteredTasks, setIsOpen, setSele
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{filteredTasks.map((task) => {
-						const isTaskOwner = activeWorkspace?.owner === account?.address;
-						const isAssignee = account?.address ? task.assignees?.includes(account.address) || false : false;
-						const canChangeStatus = isTaskOwner || isAssignee;
+					{filteredTasks
+						.filter((task) => task.taskState !== Status.Archived)
+						.map((task) => {
+							const isTaskOwner = activeWorkspace?.owner === account?.address;
+							const isAssignee = account?.address ? task.assignees?.includes(account.address) || false : false;
+							const canChangeStatus = isTaskOwner || isAssignee;
 
-						// Convert NormalizedTask to the data we need for the hook
-						const assignees = Array.isArray(task.assignees) ? (task.assignees as string[]) : [];
+							// Convert NormalizedTask to the data we need for the hook
+							const assignees = Array.isArray(task.assignees) ? (task.assignees as string[]) : [];
 
-						// Get the status from taskState (assuming NormalizedTask has taskState)
-						const status: StatusKey = getStatusFromState(task.taskState);
+							// Get the status from taskState (assuming NormalizedTask has taskState)
+							const status: StatusKey = getStatusFromState(task.taskState);
 
-						return (
-							<TableRowWithBadge
-								key={task.id}
-								task={task}
-								assignees={assignees}
-								status={status}
-								isTaskOwner={isTaskOwner}
-								isAssignee={isAssignee}
-								canChangeStatus={canChangeStatus}
-								setSelectedTask={setSelectedTask}
-								setIsOpen={setIsOpen}
-								handleStatusChange={handleStatusChange}
-								handleClaimRewards={handleClaimRewards}
-							/>
-						);
-					})}
+							return (
+								<TableRowWithBadge
+									key={task.id}
+									task={task}
+									assignees={assignees}
+									status={status}
+									isTaskOwner={isTaskOwner}
+									isAssignee={isAssignee}
+									canChangeStatus={canChangeStatus}
+									setSelectedTask={setSelectedTask}
+									setIsOpen={setIsOpen}
+									handleStatusChange={handleStatusChange}
+									handleClaimRewards={handleClaimRewards}
+								/>
+							);
+						})}
 				</TableBody>
 			</Table>
 		</div>
@@ -107,6 +115,9 @@ interface TableRowWithBadgeProps {
 
 const TableRowWithBadge: React.FC<TableRowWithBadgeProps> = ({ task, assignees, status, isTaskOwner, isAssignee, canChangeStatus, setSelectedTask, setIsOpen, handleStatusChange, handleClaimRewards }) => {
 	const account = useActiveAccount();
+	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+
+	const { handleTaskDelete } = useDeleteTask();
 
 	// Now we can use the hooks inside this component
 	const claimData = useMultipleAssigneesClaimStatus(task.workspaceId, task.id, assignees);
@@ -143,120 +154,136 @@ const TableRowWithBadge: React.FC<TableRowWithBadgeProps> = ({ task, assignees, 
 	const badgeInfo = useTaskBadgeInfo(taskForHook, isCurrentUserAssignee, hasCurrentUserClaimed, claimData, status);
 
 	return (
-		<TableRow>
-			<TableCell className="max-w-[500px]">
-				<div className="flex items-center space-x-2 ml-4">
-					<span className="truncate font-medium">{task.title}</span>
-					{badgeInfo && (
-						<Badge
-							variant={badgeInfo.variant}
-							className={badgeInfo.className}
-							onClick={badgeInfo.clickable ? () => handleClaimRewards(task.id) : undefined}
-							style={{ cursor: badgeInfo.clickable ? "pointer" : "default" }}>
-							{badgeInfo.text}
-						</Badge>
-					)}
-				</div>
-			</TableCell>
-			<TableCell>
-				<div className="flex gap-2">
-					{task.reward ? (
-						<Image
-							className="mr-1.5"
-							src={task.isPaymentNative ? "/hbar.png" : "/usdt.png"}
-							alt="reward amount"
-							width={16}
-							height={16}
-						/>
-					) : undefined}
-					{task.reward || "Not Rewarded"}
-				</div>
-			</TableCell>
-			<TableCell>
-				{(() => {
-					const IconComponent = statusIcons[task._statusLabel as keyof typeof statusIcons] || Circle;
-					return (
-						<div className="flex items-center gap-2">
-							<IconComponent className="h-4 w-4" />
-							<span>{task._statusLabel}</span>
-						</div>
-					);
-				})()}
-			</TableCell>
-			<TableCell>
-				{(() => {
-					const IconComponent = priorityIcons[task._priorityLabel as keyof typeof priorityIcons] || ArrowDown;
-					return (
-						<div className="flex items-center gap-2">
-							<IconComponent className="h-4 w-4" />
-							<span>{task._priorityLabel}</span>
-						</div>
-					);
-				})()}
-			</TableCell>
-			<TableCell>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<div className="mr-4">
-							<Button
-								variant="ghost"
-								className="h-8 w-8 p-0">
-								<MoreHorizontal className="h-4 w-4" />
-							</Button>
-						</div>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem
-							onClick={() => {
-								setSelectedTask(task as unknown as TypeSafeTaskView);
-								setIsOpen(true);
-							}}>
-							View details
-						</DropdownMenuItem>
-						{canChangeStatus && (
-							<>
-								<DropdownMenuSub>
-									<DropdownMenuSubTrigger>Mark as</DropdownMenuSubTrigger>
-									<DropdownMenuPortal>
-										<DropdownMenuSubContent className="mr-2">
-											{Object.entries(statusConfig)
-												.filter(([key]) => {
-													if (!isTaskOwner) {
-														return key !== "completed";
-													}
-													return true;
-												})
-												.map(([key, config]) => (
-													<DropdownMenuItem key={key}>
-														{key === task?._statusLabel && <Check className="h-4 w-4 text-green-600" />}
-														<div
-															onClick={async () => {
-																if (task) {
-																	await handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
-																}
-															}}
-															className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>
-															{React.createElement(config.icon, { className: "w-3.5 h-3.5" })}
-															{key.charAt(0).toUpperCase() + key.slice(1).replace("-", " ")}
-														</div>
-													</DropdownMenuItem>
-												))}
-										</DropdownMenuSubContent>
-									</DropdownMenuPortal>
-								</DropdownMenuSub>
-								{isTaskOwner && (
-									<>
-										<DropdownMenuSeparator />
-										<DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
-									</>
-								)}
-							</>
+		<>
+			<TableRow>
+				<TableCell className="max-w-[500px]">
+					<div className="flex items-center space-x-2 ml-4">
+						<span className="truncate font-medium">{task.title}</span>
+						{badgeInfo && (
+							<Badge
+								variant={badgeInfo.variant}
+								className={badgeInfo.className}
+								onClick={badgeInfo.clickable ? () => handleClaimRewards(task.id) : undefined}
+								style={{ cursor: badgeInfo.clickable ? "pointer" : "default" }}>
+								{badgeInfo.text}
+							</Badge>
 						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</TableCell>
-		</TableRow>
+					</div>
+				</TableCell>
+				<TableCell>
+					<div className="flex gap-2">
+						{task.reward ? (
+							<Image
+								className="mr-1.5"
+								src={task.isPaymentNative ? "/hbar.png" : "/usdt.png"}
+								alt="reward amount"
+								width={16}
+								height={16}
+							/>
+						) : undefined}
+						{task.reward || "Not Rewarded"}
+					</div>
+				</TableCell>
+				<TableCell>
+					{(() => {
+						const IconComponent = statusIcons[task._statusLabel as keyof typeof statusIcons] || Circle;
+						return (
+							<div className="flex items-center gap-2">
+								<IconComponent className="h-4 w-4" />
+								<span>{task._statusLabel}</span>
+							</div>
+						);
+					})()}
+				</TableCell>
+				<TableCell>
+					{(() => {
+						const IconComponent = priorityIcons[task._priorityLabel as keyof typeof priorityIcons] || ArrowDown;
+						return (
+							<div className="flex items-center gap-2">
+								<IconComponent className="h-4 w-4" />
+								<span>{task._priorityLabel}</span>
+							</div>
+						);
+					})()}
+				</TableCell>
+				<TableCell>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<div className="mr-4">
+								<Button
+									variant="ghost"
+									className="h-8 w-8 p-0">
+									<MoreHorizontal className="h-4 w-4" />
+								</Button>
+							</div>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								onClick={() => {
+									setSelectedTask(task as unknown as TypeSafeTaskView);
+									setIsOpen(true);
+								}}>
+								View details
+							</DropdownMenuItem>
+							{canChangeStatus && (
+								<>
+									<DropdownMenuSub>
+										<DropdownMenuSubTrigger>Mark as</DropdownMenuSubTrigger>
+										<DropdownMenuPortal>
+											<DropdownMenuSubContent className="mr-2">
+												{Object.entries(statusConfig)
+													.filter(([key]) => {
+														if (!isTaskOwner) {
+															return key !== "completed";
+														}
+														return true;
+													})
+													.map(([key, config]) => (
+														<DropdownMenuItem key={key}>
+															{key === task?._statusLabel && <Check className="h-4 w-4 text-green-600" />}
+															<div
+																onClick={async () => {
+																	if (task) {
+																		await handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
+																	}
+																}}
+																className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>
+																{React.createElement(config.icon, { className: "w-3.5 h-3.5" })}
+																{key.charAt(0).toUpperCase() + key.slice(1).replace("-", " ")}
+															</div>
+														</DropdownMenuItem>
+													))}
+											</DropdownMenuSubContent>
+										</DropdownMenuPortal>
+									</DropdownMenuSub>
+									{isTaskOwner && (
+										<>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												className="text-red-600"
+												onClick={(e) => {
+													e.preventDefault();
+													setShowDeleteDialog(true);
+												}}>
+												Delete
+											</DropdownMenuItem>
+										</>
+									)}
+								</>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</TableCell>
+			</TableRow>
+			<DeleteTaskDialog
+				task={task}
+				open={showDeleteDialog}
+				onOpenChange={setShowDeleteDialog}
+				onConfirm={() => handleTaskDelete(task.id)}
+			/>
+		</>
 	);
 };
 
 export default TableView;
+
