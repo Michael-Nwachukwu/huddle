@@ -8,7 +8,7 @@ const Page = () => {
     const { activeWorkspace } = useWorkspace();
     return (
         <section className='p-5 h-full'>
-            <Card className='p-4 h-full @container/card'>
+            <Card className='p-4 h-full max-h-full overflow-y-auto @container/card'>
                 <TopicChat topicId={activeWorkspace?.topicId} />
             </Card>
         </section>
