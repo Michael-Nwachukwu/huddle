@@ -46,7 +46,7 @@ function BalanceCard({ title, balance, symbol, icon, isLoading }: BalanceCardPro
 			</div>
 			<Badge
 				variant="secondary"
-				className="text-sm font-mono">
+				className="text-xs font-mono">
 				{balance}
 			</Badge>
 		</div>
