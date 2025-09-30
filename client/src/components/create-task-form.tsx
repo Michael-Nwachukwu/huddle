@@ -847,5 +847,4 @@ export default function CreateTaskForm() {
 			</Form>
 		</>
 	);
-	``;
 }

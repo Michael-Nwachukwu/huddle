@@ -139,7 +139,7 @@ export function TopicChat({ topicId, className }: TopicChatProps) {
     }
 
     return (
-        <div className={cn("flex flex-col h-full", className)}>
+        <div className={cn("flex flex-col h-full max-h-full overflow-y-auto", className)}>
             {/* Header */}
             <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-neutral-800">
                 <div>
@@ -164,7 +164,7 @@ export function TopicChat({ topicId, className }: TopicChatProps) {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto max-h-full p-4 space-y-3">
                 {error && (
                     <div className="text-center text-red-500 p-4">
                         <AlertCircle className="mx-auto h-8 w-8 mb-2" />
