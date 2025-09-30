@@ -1,11 +1,9 @@
 "use client";
 
-// import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
-import { formatTokenAmount } from "@/lib/utils";
 
 interface BalanceCardProps {
 	title: string;
@@ -15,7 +13,7 @@ interface BalanceCardProps {
 	isLoading?: boolean;
 }
 
-function BalanceCard({ title, balance, symbol, icon, isLoading }: BalanceCardProps) {
+function BalanceCard({ balance, symbol, icon, isLoading }: BalanceCardProps) {
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-between">
@@ -33,8 +31,6 @@ function BalanceCard({ title, balance, symbol, icon, isLoading }: BalanceCardPro
 
 	return (
 		<div className="flex items-center gap-2">
-			{/* <div className="flex items-center gap-1"> */}
-			{/* <div className="relative h-8 w-8 rounded-full bg-muted flex items-center justify-center"> */}
 			<Image
 				src={icon}
 				alt={symbol}
@@ -42,8 +38,6 @@ function BalanceCard({ title, balance, symbol, icon, isLoading }: BalanceCardPro
 				height={20}
 				className="rounded-full"
 			/>
-			{/* </div> */}
-			{/* </div> */}
 			<Badge
 				variant="secondary"
 				className="text-xs font-mono">

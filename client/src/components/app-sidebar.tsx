@@ -5,7 +5,6 @@ import { IconChartBar, IconDashboard, IconDatabase, IconFileWord, IconFolder, Ic
 
 import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { WorkspaceBalanceCards } from "@/components/workspace-balance-cards";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
