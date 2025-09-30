@@ -17,12 +17,12 @@ export const WalletConnectionModal: React.FC<WalletConnectionModalProps> = ({ is
 		<Sheet
 			open={isOpen}
 			onOpenChange={onOpenChange}>
-			<SheetContent className="sm:max-w-md fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-1/5 h-fit rounded-lg border bg-background p-6 shadow-lg">
-				<SheetHeader>
-					<SheetTitle>Connect Your Wallet</SheetTitle>
-					<SheetDescription>Connect your wallet to access your workspaces and start collaborating.</SheetDescription>
+			<SheetContent className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md h-fit rounded-lg border bg-background p-4 sm:p-6 shadow-lg">
+				<SheetHeader className="space-y-2 sm:space-y-3">
+					<SheetTitle className="text-lg sm:text-xl">Connect Your Wallet</SheetTitle>
+					<SheetDescription className="text-sm sm:text-base">Connect your wallet to access your workspaces and start collaborating.</SheetDescription>
 				</SheetHeader>
-				<div className="flex justify-center p-4">
+				<div className="flex justify-center p-4 sm:p-6 mt-2">
 					{/* <ConnectButton
 						client={client}
 						chain={hederaTestnet}
