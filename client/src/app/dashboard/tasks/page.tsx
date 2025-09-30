@@ -22,6 +22,7 @@ import { Status } from "@/utils/types";
 import type { NormalizedTask } from "@/utils/types";
 import { useNormalizedTasks } from "@/lib/utils";
 import { useActiveAccount } from "thirdweb/react";
+import { Badge } from "@/components/ui/badge";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 
@@ -42,7 +43,7 @@ export default function Page() {
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const account = useActiveAccount();
 
-	const { tasks, totalTasks, totalPages, hasNextPage, hasPreviousPage, isLoading } = useFetchTasks(activeWorkspaceID, currentPage, pageSize, assignedToMe, statusFilter);
+	const { tasks, totalPages, hasNextPage, hasPreviousPage, isLoading } = useFetchTasks(activeWorkspaceID, currentPage, pageSize, assignedToMe, statusFilter);
 	console.log("tasks", tasks);
 
 	const getStatusLabel = (status: Status): string => {
@@ -83,6 +84,9 @@ export default function Page() {
 					break;
 				case "Completed":
 					nextStatus = Status.Completed;
+					break;
+				case "Archived":
+					nextStatus = Status.Archived;
 					break;
 				default:
 					nextStatus = Status.All;
@@ -167,7 +171,9 @@ export default function Page() {
 		const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
 		const matchesStatus = statusFilter === Status.All ? true : task.taskState === statusFilter;
 		const matchesPriority = priorityFilter === "All" ? true : task._priorityLabel === priorityFilter;
-		return matchesSearch && matchesStatus && matchesPriority;
+		// Exclude archived tasks unless explicitly filtering for them
+		const isNotArchived = statusFilter === Status.Archived ? true : task.taskState !== Status.Archived;
+		return matchesSearch && matchesStatus && matchesPriority && isNotArchived;
 	});
 
 	const sortedTasks: NormalizedTask[] = [...filteredTasks].sort((a, b) => {
@@ -208,9 +214,10 @@ export default function Page() {
 					</div>
 
 					{/* filter section */}
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-						<div className="flex flex-wrap items-center gap-2">
-							<div className="relative min-w-0 flex-1 sm:flex-none">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+							{/* Search input - full width on mobile */}
+							<div className="relative w-full sm:min-w-0 sm:flex-1 sm:max-w-[250px]">
 								<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 								<Input
 									placeholder="Filter tasks..."
@@ -219,97 +226,95 @@ export default function Page() {
 										setSearchQuery(e.target.value);
 										setCurrentPage(0); // Reset to first page when searching
 									}}
-									className="pl-8 w-full sm:w-[250px]"
+									className="pl-8 w-full"
 								/>
 							</div>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
+
+							{/* Filter buttons - stack on mobile, inline on larger screens */}
+							<div className="flex flex-wrap items-center gap-2">
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											className="bg-transparent border-dashed h-9 px-3 text-sm">
+											<CirclePlus className="h-4 w-4" />
+											<span>Status</span>
+											{statusFilter !== Status.All && (
+												<Badge
+													variant="secondary"
+													className="ml-1 text-xs">
+													{getStatusLabel(statusFilter)}
+												</Badge>
+											)}
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent
+										align="end"
+										className="w-48">
+										<DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.All)}>All</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.Pending)}>Pending</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.InProgress)}>
+											<Timer className="h-4 w-4 mr-2" />
+											In Progress
+										</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.Completed)}>Completed</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.Archived)}>Archived</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											className="bg-transparent border-dashed h-9 px-3 text-sm">
+											<CirclePlus className="h-4 w-4" />
+											<span>Priority</span>
+											{priorityFilter !== "All" && (
+												<Badge
+													variant="secondary"
+													className="ml-1 text-xs">
+													{getPriorityLabel(priorityFilter)}
+												</Badge>
+											)}
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent
+										align="end"
+										className="w-48">
+										<DropdownMenuLabel>Filter by priority</DropdownMenuLabel>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={() => handlePriorityChange("All")}>All</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePriorityChange("Low")}>Low</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePriorityChange("Medium")}>Medium</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePriorityChange("High")}>High</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+
+								{/* Reset button */}
+								{(statusFilter !== Status.All || priorityFilter !== "All" || searchQuery.trim() !== "" || assignedToMe) && (
 									<Button
-										variant="outline"
-										className="bg-transparent border-dashed border-gray-200 dark:border-gray-700">
-										<CirclePlus />
-										Status
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuLabel>Filter by status</DropdownMenuLabel>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.All)}>All</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.Pending)}>Pending</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.InProgress)}>
-										<Timer />
-										In Progress
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.Completed)}>Completed</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-							{statusFilter !== Status.All && (
-								<div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-1 h-9">
-									<span className="text-sm">{getStatusLabel(statusFilter)}</span>
-									<button
-										type="button"
-										aria-label="Clear status filter"
+										variant="ghost"
+										size="sm"
+										className="text-sm text-foreground/80 hover:text-foreground h-9 px-3"
 										onClick={() => {
 											setStatusFilter(Status.All);
-											setCurrentPage(0);
-										}}
-										className="inline-flex items-center justify-center rounded hover:opacity-80">
-										<X className="h-4 w-4" />
-									</button>
-								</div>
-							)}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="outline"
-										className="bg-transparent border-dashed border-gray-200 dark:border-gray-700">
-										<CirclePlus />
-										Priority
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuLabel>Filter by priority</DropdownMenuLabel>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => handlePriorityChange("All")}>All</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handlePriorityChange("Low")}>Low</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handlePriorityChange("Medium")}>Medium</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handlePriorityChange("High")}>High</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-							{priorityFilter !== "All" && (
-								<div className="flex items-center gap-2 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-1 h-9">
-									<span className="text-sm">{getPriorityLabel(priorityFilter)}</span>
-									<button
-										type="button"
-										aria-label="Clear priority filter"
-										onClick={() => {
 											setPriorityFilter("All");
+											setSearchQuery("");
+											setAssignedToMe(false);
 											setCurrentPage(0);
-										}}
-										className="inline-flex items-center justify-center rounded hover:opacity-80">
-										<X className="h-4 w-4" />
-									</button>
-								</div>
-							)}
+										}}>
+										<span className="hidden sm:inline">Reset</span>
+										<X className="h-4 w-4 sm:ml-1" />
+									</Button>
+								)}
+							</div>
 						</div>
-						<div className="flex items-center gap-4">
-							{(statusFilter !== Status.All || priorityFilter !== "All" || searchQuery.trim() !== "" || assignedToMe) && (
-								<button
-									type="button"
-									className="text-sm text-foreground/80 hover:underline inline-flex items-center gap-1"
-									onClick={() => {
-										setStatusFilter(Status.All);
-										setPriorityFilter("All");
-										setSearchQuery("");
-										setAssignedToMe(false);
-										setCurrentPage(0);
-									}}>
-									<span>Reset</span>
-									<X className="h-4 w-4" />
-								</button>
-							)}
-							{activeWorkspace?.owner === account?.address && <CreateTaskDrawer />}
-						</div>
+
+						{activeWorkspace?.owner === account?.address && <CreateTaskDrawer />}
 					</div>
 
 					<ViewToolbar
@@ -357,7 +362,7 @@ export default function Page() {
 									<span className="sr-only">Loading</span>
 								</div>
 							) : (
-								`Showing ${sortedTasks.length} of ${Number(totalTasks)} task(s)`
+								`Showing ${sortedTasks.length} task(s)`
 							)}
 						</div>
 						<div className="flex flex-wrap items-center gap-3 sm:gap-6 lg:gap-8">
