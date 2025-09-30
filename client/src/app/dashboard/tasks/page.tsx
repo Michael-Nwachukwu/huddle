@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Search, Timer, CirclePlus } from "lucide-react";
+import { ChevronDown, Search, Timer, CirclePlus, X } from "lucide-react";
 
 import ViewToolbar from "./_components/view-toolbar";
 import TableView from "./_components/table-view";
@@ -20,6 +22,7 @@ import { Status } from "@/utils/types";
 import type { NormalizedTask } from "@/utils/types";
 import { useNormalizedTasks } from "@/lib/utils";
 import { useActiveAccount } from "thirdweb/react";
+import { Badge } from "@/components/ui/badge";
 
 type SortOption = "newest" | "oldest" | "due-date" | "last-updated";
 
@@ -40,8 +43,29 @@ export default function Page() {
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const account = useActiveAccount();
 
-	const { tasks, totalTasks, totalPages, hasNextPage, hasPreviousPage, isLoading } = useFetchTasks(activeWorkspaceID, currentPage, pageSize, assignedToMe, statusFilter);
+	const { tasks, totalPages, hasNextPage, hasPreviousPage, isLoading } = useFetchTasks(activeWorkspaceID, currentPage, pageSize, assignedToMe, statusFilter);
 	console.log("tasks", tasks);
+
+	const getStatusLabel = (status: Status): string => {
+		switch (status) {
+			case Status.Pending:
+				return "Pending";
+			case Status.InProgress:
+				return "In Progress";
+			case Status.Completed:
+				return "Completed";
+			case Status.Archived:
+				return "Archived";
+			case Status.AssigneeDone:
+				return "Assignee Done";
+			default:
+				return "All";
+		}
+	};
+
+	const getPriorityLabel = (priority: "All" | "Low" | "Medium" | "High"): string => {
+		return priority;
+	};
 
 	const handleStatusChange = (status: string | Status) => {
 		let nextStatus: Status | null = null;
@@ -60,6 +84,9 @@ export default function Page() {
 					break;
 				case "Completed":
 					nextStatus = Status.Completed;
+					break;
+				case "Archived":
+					nextStatus = Status.Archived;
 					break;
 				default:
 					nextStatus = Status.All;
@@ -103,11 +130,50 @@ export default function Page() {
 
 	const normalizedTasks = useNormalizedTasks(tasks);
 
+	const LoadingGrid = () => (
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+			{Array.from({ length: 6 }).map((_, idx) => (
+				<div
+					key={idx}
+					className="h-full">
+					<Card className="h-full p-4 space-y-3">
+						<Skeleton className="h-5 w-2/3" />
+						<Skeleton className="h-3 w-full" />
+						<Skeleton className="h-3 w-5/6" />
+						<div className="flex gap-2">
+							<Skeleton className="h-4 w-16" />
+							<Skeleton className="h-4 w-12" />
+						</div>
+					</Card>
+				</div>
+			))}
+		</div>
+	);
+
+	const LoadingTable = () => (
+		<div className="rounded-md border">
+			<div className="divide-y">
+				{Array.from({ length: 6 }).map((_, idx) => (
+					<div
+						key={idx}
+						className="grid grid-cols-4 gap-4 items-center p-4">
+						<Skeleton className="h-4 w-3/4" />
+						<Skeleton className="h-4 w-1/3" />
+						<Skeleton className="h-4 w-1/4" />
+						<Skeleton className="h-8 w-8 rounded" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+
 	const filteredTasks = normalizedTasks.filter((task) => {
 		const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
 		const matchesStatus = statusFilter === Status.All ? true : task.taskState === statusFilter;
 		const matchesPriority = priorityFilter === "All" ? true : task._priorityLabel === priorityFilter;
-		return matchesSearch && matchesStatus && matchesPriority;
+		// Exclude archived tasks unless explicitly filtering for them
+		const isNotArchived = statusFilter === Status.Archived ? true : task.taskState !== Status.Archived;
+		return matchesSearch && matchesStatus && matchesPriority && isNotArchived;
 	});
 
 	const sortedTasks: NormalizedTask[] = [...filteredTasks].sort((a, b) => {
@@ -148,9 +214,10 @@ export default function Page() {
 					</div>
 
 					{/* filter section */}
-					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-						<div className="flex flex-wrap items-center gap-2">
-							<div className="relative min-w-0 flex-1 sm:flex-none">
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
+							{/* Search input - full width on mobile */}
+							<div className="relative w-full sm:min-w-0 sm:flex-1 sm:max-w-[250px]">
 								<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
 								<Input
 									placeholder="Filter tasks..."
@@ -159,49 +226,94 @@ export default function Page() {
 										setSearchQuery(e.target.value);
 										setCurrentPage(0); // Reset to first page when searching
 									}}
-									className="pl-8 w-full sm:w-[250px]"
+									className="pl-8 w-full"
 								/>
 							</div>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
+
+							{/* Filter buttons - stack on mobile, inline on larger screens */}
+							<div className="flex flex-wrap items-center gap-2">
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											className="bg-transparent border-dashed h-9 px-3 text-sm">
+											<CirclePlus className="h-4 w-4" />
+											<span>Status</span>
+											{statusFilter !== Status.All && (
+												<Badge
+													variant="secondary"
+													className="ml-1 text-xs">
+													{getStatusLabel(statusFilter)}
+												</Badge>
+											)}
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent
+										align="end"
+										className="w-48">
+										<DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.All)}>All</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.Pending)}>Pending</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.InProgress)}>
+											<Timer className="h-4 w-4 mr-2" />
+											In Progress
+										</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.Completed)}>Completed</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handleStatusChange(Status.Archived)}>Archived</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											className="bg-transparent border-dashed h-9 px-3 text-sm">
+											<CirclePlus className="h-4 w-4" />
+											<span>Priority</span>
+											{priorityFilter !== "All" && (
+												<Badge
+													variant="secondary"
+													className="ml-1 text-xs">
+													{getPriorityLabel(priorityFilter)}
+												</Badge>
+											)}
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent
+										align="end"
+										className="w-48">
+										<DropdownMenuLabel>Filter by priority</DropdownMenuLabel>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem onClick={() => handlePriorityChange("All")}>All</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePriorityChange("Low")}>Low</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePriorityChange("Medium")}>Medium</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => handlePriorityChange("High")}>High</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+
+								{/* Reset button */}
+								{(statusFilter !== Status.All || priorityFilter !== "All" || searchQuery.trim() !== "" || assignedToMe) && (
 									<Button
-										variant="outline"
-										className="bg-transparent border-dashed border-gray-200 dark:border-gray-700">
-										<CirclePlus />
-										Status
+										variant="ghost"
+										size="sm"
+										className="text-sm text-foreground/80 hover:text-foreground h-9 px-3"
+										onClick={() => {
+											setStatusFilter(Status.All);
+											setPriorityFilter("All");
+											setSearchQuery("");
+											setAssignedToMe(false);
+											setCurrentPage(0);
+										}}>
+										<span className="hidden sm:inline">Reset</span>
+										<X className="h-4 w-4 sm:ml-1" />
 									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuLabel>Filter by status</DropdownMenuLabel>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.All)}>All</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.Pending)}>Pending</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.InProgress)}>
-										<Timer />
-										In Progress
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handleStatusChange(Status.Completed)}>Completed</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="outline"
-										className="bg-transparent border-dashed border-gray-200 dark:border-gray-700">
-										<CirclePlus />
-										Priority
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuLabel>Filter by priority</DropdownMenuLabel>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => handlePriorityChange("All")}>All</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handlePriorityChange("Low")}>Low</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handlePriorityChange("Medium")}>Medium</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => handlePriorityChange("High")}>High</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
+								)}
+							</div>
 						</div>
+
 						{activeWorkspace?.owner === account?.address && <CreateTaskDrawer />}
 					</div>
 
@@ -216,8 +328,14 @@ export default function Page() {
 						onPriorityChange={handlePriorityChange}
 					/>
 
-					{/* table */}
-					{viewMode === "list" ? (
+					{/* table/grid */}
+					{isLoading ? (
+						viewMode === "list" ? (
+							<LoadingTable />
+						) : (
+							<LoadingGrid />
+						)
+					) : viewMode === "list" ? (
 						<TableView
 							filteredTasks={sortedTasks}
 							setIsOpen={setIsOpen}
@@ -233,7 +351,20 @@ export default function Page() {
 
 					{/* pagination section */}
 					<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-2">
-						<div className="flex-1 text-sm text-muted-foreground">{isLoading ? "Loading..." : `Showing ${sortedTasks.length} of ${Number(totalTasks)} task(s)`}</div>
+						<div className="flex-1 text-sm text-muted-foreground">
+							{isLoading ? (
+								<div className="flex items-center gap-2">
+									<span
+										className="inline-block h-4 w-4 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin"
+										role="status"
+										aria-label="Loading"
+									/>
+									<span className="sr-only">Loading</span>
+								</div>
+							) : (
+								`Showing ${sortedTasks.length} task(s)`
+							)}
+						</div>
 						<div className="flex flex-wrap items-center gap-3 sm:gap-6 lg:gap-8">
 							<div className="flex items-center gap-2">
 								<p className="text-sm font-medium">Rows per page</p>

@@ -1,6 +1,6 @@
 import React from "react";
 import GridCard from "./GridCard";
-import { NormalizedTask, TypeSafeTaskView } from "@/utils/types";
+import { NormalizedTask, TypeSafeTaskView, Status } from "@/utils/types";
 
 interface GridViewProps {
 	filteredTasks: NormalizedTask[];
@@ -11,21 +11,23 @@ interface GridViewProps {
 const GridView: React.FC<GridViewProps> = ({ filteredTasks, setIsOpen, setSelectedTask }) => {
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-			{filteredTasks.map((item) => (
-				<div
-					key={item.id}
-					className="h-full">
-					<GridCard
-						item={item}
-						className="h-full"
-						setIsOpen={setIsOpen}
-						onViewDetails={(task) => {
-							setSelectedTask(task);
-							setIsOpen(true);
-						}}
-					/>
-				</div>
-			))}
+			{filteredTasks
+				.filter((task) => task.taskState !== Status.Archived)
+				.map((item) => (
+					<div
+						key={item.id}
+						className="h-full">
+						<GridCard
+							item={item}
+							className="h-full"
+							setIsOpen={setIsOpen}
+							onViewDetails={(task) => {
+								setSelectedTask(task);
+								setIsOpen(true);
+							}}
+						/>
+					</div>
+				))}
 		</div>
 	);
 };

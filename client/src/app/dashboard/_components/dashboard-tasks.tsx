@@ -6,6 +6,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useNormalizedTasks } from "@/lib/utils";
 import ViewTaskDrawer from "@/components/view-task-drawer";
 import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
+import { Status } from "@/utils/types";
 
 interface DashboardTasksProps {
 	className?: string;
@@ -24,21 +25,24 @@ export default function DashboardTasks({ className }: DashboardTasksProps) {
 		<div className={cn("w-full overflow-x-auto scrollbar-none", className)}>
 			<div className="flex gap-3 min-w-full p-1">
 				{normalizedTasks.length > 0 ? (
-					normalizedTasks.map((task) => (
-						<div
-							key={`${task.workspaceId}-${task.id}`}
-							className="w-[280px] shrink-0">
-							<GridCard
-								item={task}
-								setIsOpen={() => setIsOpen(true)}
-								onViewDetails={(task) => {
-									// onTaskSelect?.(task);
-									setSelectedTask(task);
-									setIsOpen(true);
-								}}
-							/>
-						</div>
-					))
+					normalizedTasks
+						.filter((task) => task.taskState !== Status.Archived)
+						.reverse()
+						.map((task) => (
+							<div
+								key={`${task.workspaceId}-${task.id}`}
+								className="w-[280px] shrink-0">
+								<GridCard
+									item={task}
+									setIsOpen={() => setIsOpen(true)}
+									onViewDetails={(task) => {
+										// onTaskSelect?.(task);
+										setSelectedTask(task);
+										setIsOpen(true);
+									}}
+								/>
+							</div>
+						))
 				) : (
 					<div className="w-full flex items-center justify-center">
 						<p className="text-sm text-muted-foreground">No tasks found</p>

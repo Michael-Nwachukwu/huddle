@@ -5,9 +5,7 @@ import { Button } from "./ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-// import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2, Check, Download, Loader2 } from "lucide-react";
+import { CalendarDays, Clock, User, CheckCircle2, FileText, Paperclip, MessageSquare, Plus, Share, Edit, MoreHorizontal, X, ChevronDown, Trash2, Check, Download, Loader2, Trash } from "lucide-react";
 import type { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
 import Address from "./Address";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -21,50 +19,26 @@ import { useSendTransaction, useActiveAccount } from "thirdweb/react";
 import { addTaskAssignee } from "@/lib/tasksABI";
 import { cn, extractRevertReason } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 
-import { statusConfig, type StatusKey } from "@/app/dashboard/tasks/_components/GridCard";
-import { markAsABI } from "@/lib/tasksABI";
-import { Status } from "@/utils/types";
+import { statusConfig, type StatusKey, statusKeyToStatus, getStatusFromState } from "@/lib/utils";
 
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, RefreshCw, AlertCircle } from "lucide-react";
 import { useTopicMessages, decodeMessage } from "@/hooks/useTopicMessages";
 import { useHederaAccount } from "@/hooks/use-hedera-account";
-
-// Mapping function to convert StatusKey to Status enum
-const statusKeyToStatus = (statusKey: StatusKey): Status => {
-	switch (statusKey) {
-		case "pending":
-			return Status.Pending;
-		case "in-progress":
-			return Status.InProgress;
-		case "assigneeDone":
-			return Status.AssigneeDone; // Assuming assigneeDone maps to InProgress
-		case "completed":
-			return Status.Completed;
-		case "archived":
-			return Status.Pending; // Assuming archived maps to Pending, adjust as needed
-		default:
-			return Status.Pending;
-	}
-};
-
+import { useStatusChange } from "@/hooks/use-status-change";
+import FileDetailsModal from "./file-details-modal";
+import DeleteTaskDialog from "@/app/dashboard/tasks/_components/delete-task-dialog";
+import { useDeleteTask } from "@/hooks/use-delete-task";
 const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpen: (isOpen: boolean) => void; task: TypeSafeTaskView | null }) => {
-	const [fileRetrieveStatus, setFileRetrieveStatus] = useState<string>("");
-	const [retrieving, setRetrieving] = useState(false);
-	const [retrievedFile, setRetrievedFile] = useState<{
-		fileId?: string;
-		contents?: string;
-		size?: number;
-	} | null>(null);
+	const { handleStatusChange } = useStatusChange();
 
 	// Comment system state
 	const [comment, setComment] = useState("");
 	const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 	const commentsEndRef = useRef<HTMLDivElement>(null);
 	const commentInputRef = useRef<HTMLInputElement>(null);
+	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
 	const account = useActiveAccount();
 	// Get Hedera account data for current user
@@ -78,6 +52,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 	const { teamMembers } = useWorkspace(); // Access teamMembers from the useWorkspace();
 	const { activeWorkspaceID, activeWorkspace } = useWorkspace();
 	const { mutateAsync: sendTransaction } = useSendTransaction();
+	const { handleTaskDelete } = useDeleteTask();
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -120,20 +95,15 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 		}
 	}, [isOpen]);
 
-	const statusLabel = useMemo(() => {
-		if (!task) return "";
-		return task.taskState === 0 ? "Pending" : task.taskState === 1 ? "Completed" : task.taskState === 2 ? "Archived" : task.taskState === 3 ? "In Progress" : "Assignee Done";
-	}, [task]);
-
 	const priorityLabel = useMemo(() => {
 		if (!task) return "";
 		return task.priority === 0 ? "Low" : task.priority === 1 ? "Medium" : "High";
 	}, [task]);
 
 	const status: StatusKey = useMemo(() => {
-		if (!statusLabel) return "pending";
-		return statusLabel.toLowerCase().replace(/\s+/g, "-") as StatusKey;
-	}, [statusLabel]);
+		if (!task) return "pending";
+		return getStatusFromState(task.taskState);
+	}, [task]);
 
 	const handlePostComment = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -292,134 +262,11 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 		return isTaskOwner || isAssignee;
 	}, [isTaskOwner, isAssignee]);
 
-	const handleStatusChange = async (taskId: number, taskState: Status) => {
-		// e.preventDefault();
-
-		if (isSubmitting) return;
-
-		setIsSubmitting(true);
-		const toastId = toast.loading("Updating task status...", {
-			position: "top-right",
-		});
-
-		try {
-			const transaction = prepareContractCall({
-				contract,
-				method: markAsABI,
-				params: [BigInt(activeWorkspaceID), BigInt(taskId), taskState],
-			});
-
-			await sendTransaction(transaction, {
-				onSuccess: async (result) => {
-					console.log("ThirdWeb reported success:", result);
-
-					// Try to get the actual transaction receipt
-					try {
-						if (result.transactionHash) {
-							console.log("Transaction hash:", result.transactionHash);
-
-							// Wait a bit for the transaction to be mined
-							setTimeout(async () => {
-								try {
-									const receipt = await waitForReceipt({
-										client,
-										chain: hederaTestnet,
-										transactionHash: result.transactionHash,
-									});
-									console.log("Actual transaction receipt:", receipt);
-
-									if (receipt.status === "success") {
-										toast.success("Task status updated successfully!", { id: toastId });
-									} else {
-										console.log("Task State Update Transaction failed on blockchain");
-										toast.error("Task State Update Transaction failed on blockchain", { id: toastId });
-									}
-								} catch (receiptError) {
-									console.error("Error getting receipt:", receiptError);
-									toast.error("Transaction status unclear", { id: toastId });
-								}
-							}, 3000); // Wait 3 seconds for mining
-						}
-					} catch (error) {
-						console.error("Error processing transaction result:", error);
-					}
-				},
-			});
-		} catch (error) {
-			toast.error((error as Error).message || "Transaction failed.", {
-				id: toastId,
-				position: "top-right",
-			});
-			toast.dismiss(toastId);
-			setIsSubmitting(false);
-		}
-	};
-
-	const fetchFileDetails = async (fileIdToRetrieve: string) => {
-		// const fileIdToRetrieve = result?.fileId || "0.0.6892578"; // Use uploaded fileId or fallback
-
-		setRetrieving(true);
-		setFileRetrieveStatus("Retrieving file from Hedera...");
-		setRetrievedFile(null); // Reset previous file data
-
-		try {
-			const response = await fetch(`/api/retrieve-file?fileId=${fileIdToRetrieve}`, {
-				method: "GET",
-			});
-
-			const data = await response.json();
-
-			if (data.success) {
-				setFileRetrieveStatus(`File retrieved successfully!`);
-				setRetrievedFile({
-					fileId: data.fileId,
-					contents: data.contents,
-					size: data.size,
-				});
-			} else {
-				setFileRetrieveStatus(`Retrieval failed: ${data.error}`);
-				if (data.details) {
-					console.error("Retrieval details:", data.details);
-				}
-			}
-		} catch (err: any) {
-			setFileRetrieveStatus(`Retrieval failed: ${err.message}`);
-			console.error("Retrieval error:", err);
-		} finally {
-			setRetrieving(false);
-		}
-	};
-
-	// Handle file icon click
 	const handleFileClick = () => {
 		if (task?.fileId) {
 			setIsFileModalOpen(true);
-			fetchFileDetails(task.fileId);
+			// fetchFileDetails(task.fileId);
 		}
-	};
-
-	// Handle file download
-	const handleDownloadFile = () => {
-		if (retrievedFile?.contents && retrievedFile?.fileId) {
-			const blob = new Blob([retrievedFile.contents], { type: "text/plain" });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = `file-${retrievedFile.fileId}.txt`;
-			document.body.appendChild(a);
-			a.click();
-			document.body.removeChild(a);
-			URL.revokeObjectURL(url);
-		}
-	};
-
-	// Format file size
-	const formatFileSize = (bytes: number) => {
-		if (bytes === 0) return "0 Bytes";
-		const k = 1024;
-		const sizes = ["Bytes", "KB", "MB", "GB"];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 	};
 
 	return (
@@ -446,8 +293,9 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 							<Button
 								variant="ghost"
 								size="icon"
-								className="text-muted-foreground hover:text-foreground">
-								<MoreHorizontal className="h-4 w-4" />
+								className="text-muted-foreground hover:text-foreground"
+								onClick={() => setShowDeleteDialog(true)}>
+								<Trash className="h-4 w-4" />
 							</Button>
 							<DrawerClose>
 								<Button
@@ -551,7 +399,8 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 											<div className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5", statusConfig[status].bg, statusConfig[status].class)}>
 												<div className="flex gap-2">
 													{React.createElement(statusConfig[status].icon, { className: "w-3.5 h-3.5" })}
-													{statusLabel}
+													{/* {statusLabel} */}
+													{status.charAt(0).toUpperCase() + status.slice(1)}
 												</div>
 												<ChevronDown className="h-4 w-4 ml-2" />
 											</div>
@@ -570,9 +419,9 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 														return (
 															<div
 																key={key}
-																onClick={() => {
+																onClick={async () => {
 																	if (task) {
-																		handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
+																		await handleStatusChange(task?.id, statusKeyToStatus(key as StatusKey));
 																	}
 																}}
 																className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 cursor-pointer hover:opacity-80", config.bg, config.class)}>
@@ -587,7 +436,7 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 								) : (
 									<div className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5", statusConfig[status].bg, statusConfig[status].class)}>
 										{React.createElement(statusConfig[status].icon, { className: "w-3.5 h-3.5" })}
-										{statusLabel}
+										{status.charAt(0).toUpperCase() + status.slice(1)}
 									</div>
 								)}
 							</div>
@@ -757,93 +606,24 @@ const ViewTaskDrawer = ({ isOpen, setIsOpen, task }: { isOpen: boolean; setIsOpe
 					</DrawerFooter>
 				</DrawerContent>
 			</Drawer>
+			{task && (
+				<DeleteTaskDialog
+					task={task}
+					open={showDeleteDialog}
+					onOpenChange={setShowDeleteDialog}
+					onConfirm={() => handleTaskDelete(task.id)}
+				/>
+			)}
 
 			{/* File Details Modal */}
-			<Dialog
-				open={isFileModalOpen}
-				onOpenChange={setIsFileModalOpen}>
-				<DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-					<DialogHeader>
-						<DialogTitle className="flex items-center gap-2">
-							<FileText className="h-5 w-5" />
-							File Attachment
-						</DialogTitle>
-						<DialogDescription>{retrievedFile?.fileId && `File ID: ${retrievedFile.fileId}`}</DialogDescription>
-					</DialogHeader>
 
-					<div className="flex-1 overflow-hidden flex flex-col space-y-4">
-						{/* File Info */}
-						{retrievedFile && (
-							<div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-								<div className="flex items-center gap-3">
-									<FileText className="h-6 w-6 text-muted-foreground" />
-									<div>
-										<p className="font-medium text-sm">Attachment File</p>
-										<p className="text-xs text-muted-foreground">{retrievedFile.size && formatFileSize(retrievedFile.size)}</p>
-									</div>
-								</div>
-								<Button
-									size="sm"
-									variant="outline"
-									onClick={handleDownloadFile}
-									disabled={!retrievedFile.contents}>
-									<Download className="h-4 w-4 mr-2" />
-									Download
-								</Button>
-							</div>
-						)}
-
-						{/* Loading State */}
-						{retrieving && (
-							<div className="flex items-center justify-center p-8">
-								<div className="flex items-center gap-3">
-									<Loader2 className="h-6 w-6 animate-spin" />
-									<span className="text-sm text-muted-foreground">{fileRetrieveStatus}</span>
-								</div>
-							</div>
-						)}
-
-						{/* Error State */}
-						{!retrieving && fileRetrieveStatus.includes("failed") && (
-							<div className="flex items-center justify-center p-8">
-								<div className="text-center">
-									<X className="h-12 w-12 text-destructive mx-auto mb-2" />
-									<p className="text-sm text-destructive">{fileRetrieveStatus}</p>
-								</div>
-							</div>
-						)}
-
-						{/* File Content */}
-						{!retrieving && retrievedFile?.contents && (
-							<div className="flex-1 overflow-auto">
-								<div className="p-4 bg-muted rounded-lg">
-									<h4 className="font-medium text-sm mb-3">File Contents:</h4>
-									<pre className="text-xs whitespace-pre-wrap break-words text-muted-foreground max-h-96 overflow-auto">{retrievedFile.contents}</pre>
-								</div>
-							</div>
-						)}
-
-						{/* Success State without Content */}
-						{!retrieving && fileRetrieveStatus.includes("successfully") && !retrievedFile?.contents && (
-							<div className="flex items-center justify-center p-8">
-								<div className="text-center">
-									<CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-2" />
-									<p className="text-sm text-green-600">{fileRetrieveStatus}</p>
-									<p className="text-xs text-muted-foreground mt-1">File retrieved but no content to display</p>
-								</div>
-							</div>
-						)}
-					</div>
-
-					<div className="flex justify-end gap-2 pt-4 border-t">
-						<Button
-							variant="outline"
-							onClick={() => setIsFileModalOpen(false)}>
-							Close
-						</Button>
-					</div>
-				</DialogContent>
-			</Dialog>
+			{task?.fileId && (
+				<FileDetailsModal
+					isFileModalOpen={isFileModalOpen}
+					setIsFileModalOpen={setIsFileModalOpen}
+					fileIdToRetrieve={task?.fileId}
+				/>
+			)}
 		</>
 	);
 };

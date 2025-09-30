@@ -48,3 +48,5 @@ export interface TaskView {
 }
 
 export type NormalizedTask = TypeSafeTaskView & { _statusLabel: string; _priorityLabel: string };
+
+

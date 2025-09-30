@@ -1,22 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { cn, extractRevertReason } from "@/lib/utils";
-import { Calendar, ArrowRight, CheckCircle2, Timer, AlertCircle, ChevronUp, ChevronsUp, UserCheck, Archive } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Calendar, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { useHasUserClaimedReward, useMultipleAssigneesClaimStatus } from "@/hooks/use-fetch-tasks";
 import { Badge } from "@/components/ui/badge";
 import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
-import { useActiveAccount, useSendTransaction } from "thirdweb/react";
-import { prepareContractCall, waitForReceipt } from "thirdweb";
-import { contract } from "@/lib/contract";
-import { useState, useEffect, useMemo } from "react";
-import { toast } from "sonner";
-import { client } from "../../../../../client";
-import { hederaTestnet } from "@/utils/chains";
-import { claimRewardABI } from "@/lib/tasksABI";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { decodeErrorResult } from "viem";
-import { abi } from "@/data/HuddleABI";
+import { useActiveAccount } from "thirdweb/react";
+
+import { statusConfig, StatusKey, getStatusFromState, getPriorityIcon, getPriorityStyle, iconStyles } from "@/lib/utils";
+import { useClaimRewards, useTaskBadgeInfo } from "@/hooks/use-claim-rewards";
 
 interface GridCardProps {
 	item: TypeSafeTaskView;
@@ -25,66 +18,7 @@ interface GridCardProps {
 	onViewDetails?: (task: TypeSafeTaskView) => void;
 }
 
-const iconStyles = {
-	high: "bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-100",
-	medium: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100",
-	low: "bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100",
-} as const;
-
-export const statusConfig = {
-	pending: {
-		icon: Timer,
-		class: "text-amber-600 dark:text-amber-400",
-		bg: "bg-amber-100 dark:bg-amber-900/30",
-	},
-	"in-progress": {
-		icon: AlertCircle,
-		class: "text-blue-600 dark:text-blue-400",
-		bg: "bg-blue-100 dark:bg-blue-900/30",
-	},
-	assigneeDone: {
-		icon: UserCheck,
-		class: "text-purple-600 dark:text-purple-400",
-		bg: "bg-purple-100 dark:bg-purple-900/30",
-	},
-	completed: {
-		icon: CheckCircle2,
-		class: "text-emerald-600 dark:text-emerald-400",
-		bg: "bg-emerald-100 dark:bg-emerald-900/30",
-	},
-	archived: {
-		icon: Archive,
-		class: "text-gray-600 dark:text-gray-400",
-		bg: "bg-gray-100 dark:bg-gray-900/30",
-	},
-} as const;
-
-export type StatusKey = keyof typeof statusConfig;
-
-function getStatusFromState(taskState: number): StatusKey {
-	// 0: pending, 1: completed, 2: archived, 3: in-progress, 4: assigneeDone
-	if (taskState === 0) return "pending";
-	if (taskState === 1) return "completed";
-	if (taskState === 2) return "archived";
-	if (taskState === 3) return "in-progress";
-	return "assigneeDone";
-}
-
-function getPriorityStyle(priority: number): keyof typeof iconStyles {
-	// 0: high, 1: medium, 2: low
-	if (priority === 0) return "high";
-	if (priority === 1) return "medium";
-	return "low";
-}
-
-function getPriorityIcon(priority: number) {
-	if (priority === 0) return ChevronsUp;
-	if (priority === 1) return ChevronUp;
-	return Timer;
-}
-
 const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewDetails }) => {
-	const [isSubmitting, setIsSubmitting] = React.useState(false);
 	const assignees = Array.isArray(item.assignees) ? (item.assignees as string[]) : [];
 	const account = useActiveAccount();
 
@@ -95,95 +29,22 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 	const status: StatusKey = getStatusFromState(item.taskState);
 	const PriorityIcon = getPriorityIcon(item.priority);
 	const priorityStyle = iconStyles[getPriorityStyle(item.priority)];
-	const formattedDate = `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`; // `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+
+	const formattedDate = `Due: ${new Date(item.dueDate * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 	const amountText = item.isRewarded ? `${item.reward}${item.isPaymentNative ? "" : ""}` : undefined;
 	const progressPercent = status === "in-progress" ? 50 : status === "assigneeDone" ? 75 : status === "completed" ? 100 : status === "archived" ? 0 : 0;
 
 	// Get current user's claim status
 	const currentUserStatus = claimData.getCurrentUserStatus();
 	const isCurrentUserAssignee = !!currentUserStatus;
-	const hasCurrentUserClaimed = hasClaimed;
-
-	const { mutateAsync: sendTransaction } = useSendTransaction();
-	const { activeWorkspaceID } = useWorkspace();
+	const hasCurrentUserClaimed = hasClaimed ?? false;
 
 	console.log("claim data", claimData);
 
-	const handleClaimRewards = async (taskId: number) => {
-		// e.preventDefault();
+	const { handleClaimRewards } = useClaimRewards();
 
-		if (isSubmitting) return;
+	const badgeInfo = useTaskBadgeInfo(item, isCurrentUserAssignee, hasCurrentUserClaimed, claimData, status);
 
-		setIsSubmitting(true);
-		const toastId = toast.loading("Claiming task rewards...", {
-			position: "top-right",
-		});
-
-		try {
-			const transaction = prepareContractCall({
-				contract,
-				method: claimRewardABI,
-				params: [BigInt(activeWorkspaceID), BigInt(taskId)],
-			});
-
-			await sendTransaction(transaction, {
-				onSuccess: async (result) => {
-					console.log("ThirdWeb reported success:", result);
-
-					// Try to get the actual transaction receipt
-					try {
-						if (result.transactionHash) {
-							console.log("Transaction hash:", result.transactionHash);
-
-							// Wait a bit for the transaction to be mined
-							setTimeout(async () => {
-								try {
-									const receipt = await waitForReceipt({
-										client,
-										chain: hederaTestnet,
-										transactionHash: result.transactionHash,
-									});
-									console.log("Actual transaction receipt:", receipt);
-
-									if (receipt.status === "success") {
-										toast.success("Task reward claimed successfully!", { id: toastId });
-									} else {
-										console.log("Task Reward Claim Transaction failed on blockchain");
-										toast.error("Task Reward Claim Transaction failed on blockchain", { id: toastId });
-									}
-								} catch (receiptError) {
-									console.error("Error getting receipt:", receiptError);
-									toast.error("Transaction status unclear", { id: toastId });
-								}
-							}, 3000); // Wait 3 seconds for mining
-						}
-					} catch (error) {
-						console.error("Error processing transaction result:", error);
-					}
-				},
-				onError: (error: any) => {
-					const revertReason = extractRevertReason(error);
-					toast.error(revertReason, { id: toastId, position: "top-right" });
-					setIsSubmitting(false);
-					console.error("Error sending transaction:", error);
-					console.error("Error sending transaction:", revertReason);
-
-					const decodedError = decodeErrorResult({
-						abi: abi, // Your contract's ABI
-						data: error.data, // The error data from the transaction receipt
-						// Optionally provide eventName if known, or use wagmiAbi to infer
-					});
-					console.error("decoded error:", decodedError);
-				},
-			});
-		} catch (error) {
-			toast.error((error as Error).message || "Transaction failed.", {
-				id: toastId,
-				position: "top-right",
-			});
-			setIsSubmitting(false);
-		}
-	};
 	return (
 		<Card className={cn("flex flex-col", "w-full h-full", "@container/card", "rounded-xl", "border border-zinc-100 dark:border-zinc-800", "hover:border-zinc-200 dark:hover:border-zinc-700", "transition-all duration-200", "shadow-sm backdrop-blur-xl", "p-0", className)}>
 			<div className="p-4 space-y-3">
@@ -231,29 +92,14 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 					)}
 					<span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{amountText ?? "No reward"}</span>
 					{amountText && <span className="text-xs text-zinc-600 dark:text-zinc-400">reward</span>}
-					<div className="ml-auto flex gap-2">
-						{!isCurrentUserAssignee && status === "completed" && <Badge variant="outline">Ready to Claim</Badge>}
-						{/* Show claimed status if there are assignees and rewards */}
-						{claimData.totalAssignees > 0 && amountText && !isCurrentUserAssignee && claimData.claimedCount > 0 && (
-							<Badge>
-								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
-							</Badge>
-						)}
-
-						{/* Show claim rewards badge for current user only when task is completed */}
-						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && (
+					<div className="ml-auto">
+						{badgeInfo && (
 							<Badge
-								variant="outline"
-								className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40 cursor-pointer"
-								onClick={() => handleClaimRewards(item.id)}>
-								Claim Rewards
-							</Badge>
-						)}
-
-						{/* Show claim rewards badge for current user only when task is completed */}
-						{status === "completed" && isCurrentUserAssignee && hasCurrentUserClaimed && amountText && (
-							<Badge>
-								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
+								variant={badgeInfo.variant}
+								className={badgeInfo.className} // This handles the optional className properly
+								onClick={badgeInfo.clickable ? () => handleClaimRewards(item.id) : undefined}
+								style={{ cursor: badgeInfo.clickable ? "pointer" : "default" }}>
+								{badgeInfo.text}
 							</Badge>
 						)}
 					</div>

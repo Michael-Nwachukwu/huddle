@@ -5,8 +5,8 @@ import { IconChartBar, IconDashboard, IconDatabase, IconFileWord, IconFolder, Ic
 
 import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { WorkspaceBalanceCards } from "@/components/workspace-balance-cards";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import Image from "next/image";
 import { useTheme } from "@/context/theme-context";
@@ -67,14 +67,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		],
 		tools: [
 			{
-				name: "Notepad",
-				url: "#",
-				icon: IconDatabase,
-			},
-			{
 				name: "Huddle AI",
 				url: "/dashboard/bot",
 				icon: IconReport,
+			},
+			{
+				name: "Notepad (coming soon)",
+				url: "#",
+				icon: IconDatabase,
 			},
 			{
 				name: "Agent (coming soon)",
@@ -115,12 +115,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			<SidebarContent>
 				<NavMain items={data.navMain} />
 				<NavDocuments items={data.tools} />
-				<NavSecondary
+				{/* <NavSecondary
 					items={data.navSecondary}
 					className="mt-auto"
-				/>
+				/> */}
 			</SidebarContent>
 			<SidebarFooter>
+				<div className="px-3 py-4">
+					<WorkspaceBalanceCards />
+				</div>
 				<NavUser user={data.user || {}} />
 			</SidebarFooter>
 		</Sidebar>

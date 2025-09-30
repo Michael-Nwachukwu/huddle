@@ -2,14 +2,39 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useActiveAccount, useActiveWallet } from "thirdweb/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { hederaTestnet } from "@/utils/chains";
 import ConnectWalletButton from "./ConnectWalletButton";
+import { usePathname } from "next/navigation";
+import Faucet from "@/app/dashboard/_components/faucet";
 
 export function SiteHeader() {
 	const account = useActiveAccount();
 	const wallet = useActiveWallet();
 	const [currentChain, setCurrentChain] = useState<{ id: number } | null>(null);
+
+	const pathname = usePathname();
+	const title = useMemo(() => {
+		// Central place to map routes to their sidebar titles
+		// Keep in sync with `AppSidebar` nav items
+		const exactTitles: Record<string, string> = {
+			"/dashboard": "Dashboard",
+			"/dashboard/channel": "Huddle",
+			"/dashboard/tasks": "Tasks",
+			"/dashboard/governance": "Governance",
+			"/dashboard/account": "Account",
+			"/dashboard/bot": "Huddle AI",
+		};
+
+		if (pathname in exactTitles) return exactTitles[pathname];
+
+		// Prefix matches for dynamic/nested routes
+		if (pathname.startsWith("/dashboard/governance/")) return "Governance";
+		if (pathname.startsWith("/dashboard/tasks/")) return "Tasks";
+		if (pathname.startsWith("/dashboard/channel/")) return "Huddle";
+
+		return "Dashboard";
+	}, [pathname]);
 
 	// Check current chain when wallet connects
 	useEffect(() => {
@@ -36,9 +61,10 @@ export function SiteHeader() {
 					orientation="vertical"
 					className="mx-2 data-[orientation=vertical]:h-4"
 				/>
-				<h1 className="text-base font-medium">Documents</h1>
+				<h1 className="text-base font-medium">{title}</h1>
 				<div className="ml-auto flex items-center gap-2">
 					<ThemeToggle />
+					<Faucet />
 					{account && currentChain && currentChain.id === hederaTestnet.id && <span className="text-sm text-[#6b840a] dark:text-[#caef35] hidden sm:flex">Hedera Testnet</span>}
 					<ConnectWalletButton />
 				</div>
