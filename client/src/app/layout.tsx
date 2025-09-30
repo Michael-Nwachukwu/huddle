@@ -1,15 +1,15 @@
-import type { Metadata } from "next";
-
 import "./globals.css";
 import { ThemeProvider } from "@/context/theme-context";
 import { ThirdwebProvider } from "thirdweb/react";
 import { Toaster } from "sonner";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
+import { getMetadata } from "@/utils/getMetadata";
 
-export const metadata: Metadata = {
+export const metadata = getMetadata({
 	title: "Huddle",
 	description: "Revolutionizing the workspace",
-};
+});
+
 
 export default function RootLayout({
 	children,
