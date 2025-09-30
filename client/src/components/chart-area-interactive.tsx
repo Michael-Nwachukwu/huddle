@@ -21,7 +21,7 @@ const chartConfig = {
 	},
 	completed: {
 		label: "Completed",
-		color: "var(--chart-2, #16a34a)",
+		color: "var(--chart-2, #fff)",
 	},
 } satisfies ChartConfig;
 

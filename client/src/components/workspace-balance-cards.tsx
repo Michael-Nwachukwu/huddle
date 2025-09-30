@@ -32,18 +32,18 @@ function BalanceCard({ title, balance, symbol, icon, isLoading }: BalanceCardPro
 	}
 
 	return (
-		<div className="flex items-center justify-between">
-			<div className="flex items-center gap-3">
-				<div className="relative h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-					<Image
-						src={icon}
-						alt={symbol}
-						width={20}
-						height={20}
-						className="rounded-full"
-					/>
-				</div>
-			</div>
+		<div className="flex items-center gap-2">
+			{/* <div className="flex items-center gap-1"> */}
+			{/* <div className="relative h-8 w-8 rounded-full bg-muted flex items-center justify-center"> */}
+			<Image
+				src={icon}
+				alt={symbol}
+				width={20}
+				height={20}
+				className="rounded-full"
+			/>
+			{/* </div> */}
+			{/* </div> */}
 			<Badge
 				variant="secondary"
 				className="text-xs font-mono">
@@ -79,7 +79,7 @@ export function WorkspaceBalanceCards() {
 
 	return (
 		<>
-			<h2 className="mb-2 text-sm font-semibold">WorkSpace Balance </h2>
+			<h2 className="mb-2 text-sm font-light">WorkSpace Balance </h2>
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 				<BalanceCard
 					title="HBAR Balance"

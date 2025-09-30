@@ -42,13 +42,13 @@ const Faucet = () => {
 	return (
 		<AlertDialog>
 			<AlertDialogTrigger asChild>
-				<div className="w-13 h-13 rounded-full p-3 border border-border bg-card hover:bg-accent">
+				<div className="w-9 h-9 rounded-full p-2 border border-border bg-card hover:bg-accent">
 					<Image
 						src="/faucet-2.svg"
 						alt="Logo"
 						width={100}
 						height={100}
-						className="w-8"
+						className="w-7"
 					/>
 				</div>
 			</AlertDialogTrigger>
