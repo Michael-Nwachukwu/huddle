@@ -7,6 +7,7 @@ import { NavDocuments } from "@/components/nav-documents";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { WorkspaceBalanceCards } from "@/components/workspace-balance-cards";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import Image from "next/image";
 import { useTheme } from "@/context/theme-context";
@@ -121,6 +122,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				/>
 			</SidebarContent>
 			<SidebarFooter>
+				<div className="px-3 py-4">
+					<WorkspaceBalanceCards />
+				</div>
 				<NavUser user={data.user || {}} />
 			</SidebarFooter>
 		</Sidebar>
