@@ -572,6 +572,7 @@ export default function CreateTaskForm() {
 							<FormItem>
 								<FormLabel className="text-stone-700 dark:text-stone-300">Attachment</FormLabel>
 								<FormControl>
+									{/* <span className="text-sm text-stone-400">Max Size: 1MB</span> */}
 									<div
 										className={cn("border-2 border-dashed border-zinc-600 dark:border-zinc-800 rounded-lg p-8 text-center cursor-pointer relative", dragging ? "border-[#6b840a] dark:border-[#caef35]/80 bg-lime-500/10" : "border-zinc-100 dark:border-zinc-800  hover:border-[#6b840a]")}
 										onDragOver={handleDragOver}

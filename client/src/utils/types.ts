@@ -1,7 +1,9 @@
 export enum Status {
 	Pending = 0,
-	InProgress = 3,
 	Completed = 1,
+	Archived = 2,
+	InProgress = 3,
+	AssigneeDone = 4,
 	All = 255,
 }
 

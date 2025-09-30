@@ -1,11 +1,22 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, extractRevertReason } from "@/lib/utils";
 import { Calendar, ArrowRight, CheckCircle2, Timer, AlertCircle, ChevronUp, ChevronsUp, UserCheck, Archive } from "lucide-react";
 import Image from "next/image";
-import { useMultipleAssigneesClaimStatus } from "@/hooks/use-fetch-tasks";
+import { useHasUserClaimedReward, useMultipleAssigneesClaimStatus } from "@/hooks/use-fetch-tasks";
 import { Badge } from "@/components/ui/badge";
 import { TypeSafeTaskView } from "@/hooks/use-fetch-tasks";
+import { useActiveAccount, useSendTransaction } from "thirdweb/react";
+import { prepareContractCall, waitForReceipt } from "thirdweb";
+import { contract } from "@/lib/contract";
+import { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
+import { client } from "../../../../../client";
+import { hederaTestnet } from "@/utils/chains";
+import { claimRewardABI } from "@/lib/tasksABI";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { decodeErrorResult } from "viem";
+import { abi } from "@/data/HuddleABI";
 
 interface GridCardProps {
 	item: TypeSafeTaskView;
@@ -71,11 +82,15 @@ function getPriorityIcon(priority: number) {
 	if (priority === 1) return ChevronUp;
 	return Timer;
 }
+
 const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewDetails }) => {
+	const [isSubmitting, setIsSubmitting] = React.useState(false);
 	const assignees = Array.isArray(item.assignees) ? (item.assignees as string[]) : [];
+	const account = useActiveAccount();
 
 	// Use the new hook for multiple assignees
 	const claimData = useMultipleAssigneesClaimStatus(item.workspaceId, item.id, assignees);
+	const { hasClaimed } = useHasUserClaimedReward(item.workspaceId, item.id, account?.address || "");
 
 	const status: StatusKey = getStatusFromState(item.taskState);
 	const PriorityIcon = getPriorityIcon(item.priority);
@@ -87,9 +102,88 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 	// Get current user's claim status
 	const currentUserStatus = claimData.getCurrentUserStatus();
 	const isCurrentUserAssignee = !!currentUserStatus;
-	const hasCurrentUserClaimed = currentUserStatus?.hasClaimed || false;
+	const hasCurrentUserClaimed = hasClaimed;
+
+	const { mutateAsync: sendTransaction } = useSendTransaction();
+	const { activeWorkspaceID } = useWorkspace();
 
 	console.log("claim data", claimData);
+
+	const handleClaimRewards = async (taskId: number) => {
+		// e.preventDefault();
+
+		if (isSubmitting) return;
+
+		setIsSubmitting(true);
+		const toastId = toast.loading("Claiming task rewards...", {
+			position: "top-right",
+		});
+
+		try {
+			const transaction = prepareContractCall({
+				contract,
+				method: claimRewardABI,
+				params: [BigInt(activeWorkspaceID), BigInt(taskId)],
+			});
+
+			await sendTransaction(transaction, {
+				onSuccess: async (result) => {
+					console.log("ThirdWeb reported success:", result);
+
+					// Try to get the actual transaction receipt
+					try {
+						if (result.transactionHash) {
+							console.log("Transaction hash:", result.transactionHash);
+
+							// Wait a bit for the transaction to be mined
+							setTimeout(async () => {
+								try {
+									const receipt = await waitForReceipt({
+										client,
+										chain: hederaTestnet,
+										transactionHash: result.transactionHash,
+									});
+									console.log("Actual transaction receipt:", receipt);
+
+									if (receipt.status === "success") {
+										toast.success("Task reward claimed successfully!", { id: toastId });
+									} else {
+										console.log("Task Reward Claim Transaction failed on blockchain");
+										toast.error("Task Reward Claim Transaction failed on blockchain", { id: toastId });
+									}
+								} catch (receiptError) {
+									console.error("Error getting receipt:", receiptError);
+									toast.error("Transaction status unclear", { id: toastId });
+								}
+							}, 3000); // Wait 3 seconds for mining
+						}
+					} catch (error) {
+						console.error("Error processing transaction result:", error);
+					}
+				},
+				onError: (error: any) => {
+					const revertReason = extractRevertReason(error);
+					toast.error(revertReason, { id: toastId, position: "top-right" });
+					setIsSubmitting(false);
+					console.error("Error sending transaction:", error);
+					console.error("Error sending transaction:", revertReason);
+
+					const decodedError = decodeErrorResult({
+						abi: abi, // Your contract's ABI
+						data: error.data, // The error data from the transaction receipt
+						// Optionally provide eventName if known, or use wagmiAbi to infer
+					});
+					console.error("decoded error:", decodedError);
+				},
+			});
+		} catch (error) {
+			toast.error((error as Error).message || "Transaction failed.", {
+				id: toastId,
+				position: "top-right",
+			});
+			setIsSubmitting(false);
+		}
+	};
 	return (
 		<Card className={cn("flex flex-col", "w-full h-full", "@container/card", "rounded-xl", "border border-zinc-100 dark:border-zinc-800", "hover:border-zinc-200 dark:hover:border-zinc-700", "transition-all duration-200", "shadow-sm backdrop-blur-xl", "p-0", className)}>
 			<div className="p-4 space-y-3">
@@ -150,8 +244,16 @@ const GridCard: React.FC<GridCardProps> = ({ item, className, setIsOpen, onViewD
 						{status === "completed" && isCurrentUserAssignee && !hasCurrentUserClaimed && amountText && (
 							<Badge
 								variant="outline"
-								className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40">
+								className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-40 cursor-pointer"
+								onClick={() => handleClaimRewards(item.id)}>
 								Claim Rewards
+							</Badge>
+						)}
+
+						{/* Show claim rewards badge for current user only when task is completed */}
+						{status === "completed" && isCurrentUserAssignee && hasCurrentUserClaimed && amountText && (
+							<Badge>
+								Claimed ({claimData.claimedCount}/{claimData.totalAssignees})
 							</Badge>
 						)}
 					</div>
