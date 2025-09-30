@@ -135,18 +135,18 @@ const Page = () => {
 
 	return (
 		<>
-			<section className="mx-auto container max-w-5xl pt-14">
+			<section className="mx-auto container max-w-5xl pt-14 px-4 sm:px-6">
 				<div className="w-full space-y-8">
-					<div className="flex justify-between items-center">
-						<div className="flex gap-4 items-center">
-							{!account && <h2 className="text-4xl">Connect a wallet!</h2>}
+					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div className="flex gap-4 items-center flex-wrap">
+							{!account && <h2 className="text-2xl sm:text-3xl md:text-4xl">Connect a wallet!</h2>}
 
-							{isLoadingUsername && <Skeleton className="h-16 w-56 rounded-2xl" />}
+							{isLoadingUsername && <Skeleton className="h-12 w-40 rounded-2xl sm:h-16 sm:w-56" />}
 
-							{!isLoadingUsername && account && username && <h2 className="text-4xl">Hello, {username}!</h2>}
+							{!isLoadingUsername && account && username && <h2 className="text-2xl sm:text-3xl md:text-4xl">Hello, {username}!</h2>}
 
 							{!isLoadingUsername && account && (
-								<h2 className="text-4xl flex gap-2 items-center">
+								<h2 className="text-2xl sm:text-3xl md:text-4xl flex gap-2 items-center">
 									{!username && <span className="pb-1">Set up username</span>}
 									<Button
 										size={"icon"}
@@ -158,13 +158,19 @@ const Page = () => {
 							)}
 						</div>
 
-						{account ? <Address address={account?.address || ""} /> : <ConnectWalletButton />}
+						{account ? (
+							<div className="max-w-full break-all text-sm sm:text-base">
+								<Address address={account?.address || ""} />
+							</div>
+						) : (
+							<ConnectWalletButton />
+						)}
 					</div>
-					<div className="grid grid-cols-3 py-4 gap-8 items-center">
-						<div className="col-span-2">
+					<div className="grid grid-cols-1 gap-6 items-start py-4 md:grid-cols-3 md:gap-8">
+						<div className="md:col-span-2">
 							<ChartContainer
 								config={chartConfig}
-								className="h-40 w-full">
+								className="h-48 w-full sm:h-56 md:h-64">
 								<LineChart
 									accessibilityLayer
 									data={chartData}
@@ -194,28 +200,30 @@ const Page = () => {
 								</LineChart>
 							</ChartContainer>
 						</div>
-						<ul className="space-y-3 text-stone-500 max-w-96 text-sm">
-							<li className="flex justify-between items-center">
+						<ul className="space-y-3 text-stone-500 max-w-full md:max-w-96 text-sm">
+							<li className="flex flex-col items-start justify-start gap-1 sm:flex-row sm:items-center sm:justify-between">
 								<h3>Evm Address</h3>
 								{account ? (
-									<AccountProvider
-										address={account?.address || ""}
-										client={client}>
-										<AccountAddress formatFn={shortenAddress} />
-									</AccountProvider>
+									<div className="break-all">
+										<AccountProvider
+											address={account?.address || ""}
+											client={client}>
+											<AccountAddress formatFn={shortenAddress} />
+										</AccountProvider>
+									</div>
 								) : (
 									<span>Connect a wallet first</span>
 								)}
 							</li>
-							<li className="flex justify-between items-center">
+							<li className="flex flex-col items-start justify-start gap-1 sm:flex-row sm:items-center sm:justify-between">
 								<h3>Balance</h3>
 								{account ? data?.displayValue + " HBAR" : "Connect a wallet first"}
 							</li>
-							<li className="flex justify-between items-center">
+							<li className="flex flex-col items-start justify-start gap-1 sm:flex-row sm:items-center sm:justify-between">
 								<h3>Role</h3>
 								{account ? teamMembers?.find((member) => member.user === account?.address)?.role : "Connect a wallet first"}
 							</li>
-							<li className="flex justify-between items-center">
+							<li className="flex flex-col items-start justify-start gap-1 sm:flex-row sm:items-center sm:justify-between">
 								<span>userRecords</span>
 								<div className="flex gap-2 flex-wrap">
 									{account
@@ -233,7 +241,7 @@ const Page = () => {
 						</ul>
 					</div>
 
-					<div className="grid grid-cols-4 gap-4 my-4">
+					<div className="grid grid-cols-1 gap-4 my-4 sm:grid-cols-2 lg:grid-cols-4">
 						{statsCard.map((card, index) => (
 							<MetricCard
 								key={index}
