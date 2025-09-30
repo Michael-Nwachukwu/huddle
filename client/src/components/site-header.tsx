@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { hederaTestnet } from "@/utils/chains";
 import ConnectWalletButton from "./ConnectWalletButton";
 import { usePathname } from "next/navigation";
+import Faucet from "@/app/dashboard/_components/faucet";
 
 export function SiteHeader() {
 	const account = useActiveAccount();
@@ -63,6 +64,7 @@ export function SiteHeader() {
 				<h1 className="text-base font-medium">{title}</h1>
 				<div className="ml-auto flex items-center gap-2">
 					<ThemeToggle />
+					<Faucet />
 					{account && currentChain && currentChain.id === hederaTestnet.id && <span className="text-sm text-[#6b840a] dark:text-[#caef35] hidden sm:flex">Hedera Testnet</span>}
 					<ConnectWalletButton />
 				</div>
