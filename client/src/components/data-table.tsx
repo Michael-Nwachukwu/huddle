@@ -128,7 +128,11 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
 export function DataTable() {
 	const { activeWorkspace } = useWorkspace();
 
-	const { data: rawData, isLoading, error } = useReadContract({
+	const {
+		data: rawData,
+		isLoading,
+		error,
+	} = useReadContract({
 		contract,
 		method: "function getWorkspaceLeaderBoard(uint256) view returns ((address user, uint64 tasksCompleted, uint256 hbarEarned, uint256 erc20Earned, uint256 proposalsVoted)[])",
 		params: [BigInt(activeWorkspace?.id || 0)],
@@ -190,16 +194,9 @@ export function DataTable() {
 	}, [processedData]);
 
 	const sortableId = React.useId();
-	const sensors = useSensors(
-		useSensor(MouseSensor, {}),
-		useSensor(TouchSensor, {}),
-		useSensor(KeyboardSensor, {})
-	);
+	const sensors = useSensors(useSensor(MouseSensor, {}), useSensor(TouchSensor, {}), useSensor(KeyboardSensor, {}));
 
-	const dataIds = React.useMemo<UniqueIdentifier[]>(() =>
-		data.map(({ id }) => id),
-		[data]
-	);
+	const dataIds = React.useMemo<UniqueIdentifier[]>(() => data.map(({ id }) => id), [data]);
 
 	const table = useReactTable({
 		data,
@@ -230,8 +227,8 @@ export function DataTable() {
 		const { active, over } = event;
 		if (active.id !== over?.id) {
 			setData((data) => {
-				const oldIndex = data.findIndex(item => item.id === active.id);
-				const newIndex = data.findIndex(item => item.id === over?.id);
+				const oldIndex = data.findIndex((item) => item.id === active.id);
+				const newIndex = data.findIndex((item) => item.id === over?.id);
 				return arrayMove(data, oldIndex, newIndex);
 			});
 		}
@@ -260,6 +257,9 @@ export function DataTable() {
 			</div>
 		);
 	}
+
+	const pageCount = table.getPageCount();
+	const currentPage = pageCount > 0 ? table.getState().pagination.pageIndex + 1 : 0;
 
 	return (
 		<Tabs
@@ -403,7 +403,7 @@ export function DataTable() {
 							</Select>
 						</div>
 						<div className="flex w-fit items-center justify-center text-sm font-medium">
-							Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+							Page {currentPage} of {pageCount}
 						</div>
 						<div className="ml-auto flex items-center gap-2 lg:ml-0">
 							<Button
