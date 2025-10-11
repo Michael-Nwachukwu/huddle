@@ -9,7 +9,7 @@ export function Navbar({ className }: { className?: string }) {
 	return (
 		<div className={cn("fixed top-10 inset-x-0 w-[80%] max-w-sm mx-auto z-50 p-4", className)}>
 			<Menu setActive={setActive}>
-				{/* <MenuItem
+				{/* <MenuIte
 					setActive={setActive}
 					active={active}
 					item="Home"
