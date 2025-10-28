@@ -29,9 +29,8 @@ export default function TransactionHistory() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             Recent Activity
-            <span className="text-xs font-normal text-zinc-600 dark:text-zinc-400 ml-1">(23 transactions)</span>
           </h2>
-          <span className="text-xs text-zinc-600 dark:text-zinc-400">This Month</span>
+          <span className="hidden sm:block text-xs text-zinc-600 dark:text-zinc-400">This Month</span>
         </div>
 
         <div className="space-y-1">
