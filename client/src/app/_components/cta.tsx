@@ -21,7 +21,7 @@ export default function CTA() {
                     </svg>
 
 
-                    <div className="mx-auto max-w-4xl text-center lg:mx-0 lg:flex-auto lg:py-28 ">
+                    <div className="mx-auto max-w-5xl sm:max-w-4xl text-center lg:mx-0 lg:flex-auto lg:py-28 pb-14">
                         <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-6xl">
                             Boost your productivity today.
                         </h2>
@@ -42,17 +42,6 @@ export default function CTA() {
                             </a>
                         </div>
                     </div>
-
-
-                    {/* <div className="relative mt-16 h-80 lg:mt-8">
-                        <img
-                            alt="App screenshot"
-                            src="https://tailwindcss.com/plus-assets/img/component-images/dark-project-app-screenshot.png"
-                            width={1824}
-                            height={1080}
-                            className="absolute top-0 left-0 w-228 max-w-none rounded-md bg-white/5 ring-1 ring-white/10"
-                        />
-                    </div> */}
 
                 </div>
             </div>

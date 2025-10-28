@@ -23,18 +23,18 @@ const initialState: ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({ children, defaultTheme = "system", storageKey = "huddle-ui-theme", ...props }: ThemeProviderProps) {
-	const [theme, setTheme] = useState<Theme>(() => {
-		if (typeof window !== "undefined") {
-			return (localStorage?.getItem(storageKey) as Theme) || defaultTheme;
-		}
-		return defaultTheme;
-	});
-
+	// Initialize with defaultTheme to match server render and prevent hydration mismatch
+	const [theme, setTheme] = useState<Theme>(defaultTheme);
 	const [mounted, setMounted] = useState(false);
 
+	// Load from localStorage only after mount to prevent hydration mismatch
 	useEffect(() => {
 		setMounted(true);
-	}, []);
+		const storedTheme = localStorage?.getItem(storageKey) as Theme;
+		if (storedTheme && storedTheme !== theme) {
+			setTheme(storedTheme);
+		}
+	}, [storageKey]);
 
 	useEffect(() => {
 		if (!mounted) return;
@@ -64,7 +64,7 @@ export function ThemeProvider({ children, defaultTheme = "system", storageKey = 
 		<ThemeProviderContext.Provider
 			{...props}
 			value={value}>
-			{mounted ? children : <div style={{ visibility: "hidden" }}>{children}</div>}
+			{children}
 		</ThemeProviderContext.Provider>
 	);
 }

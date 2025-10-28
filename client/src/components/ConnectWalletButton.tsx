@@ -1,3 +1,5 @@
+"use client";
+
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { client } from "../../client";
 import { hederaTestnet } from "@/utils/chains";
