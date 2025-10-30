@@ -15,12 +15,22 @@ A decentralized workspace management platform built on Hedera Testnet that enabl
 
 ## For Testing
 
+#### Use Account and Private Key 
+
 - Account ID - 0.0.6873100
 - OPERATOR_KEY= 3030020100300706052b8104000a042204206adbf7e3a424412f101d784936dae6d09014a9708fb5906e36deeac78ffec7bd
 
 ### OR 
 
+#### Request Faucet Tokens
 
+- Click on the Faucet Button On the Navbar
+
+<img width="1142" height="79" alt="Screenshot 2025-10-30 at 1 44 56 PM" src="https://github.com/user-attachments/assets/4f541860-f394-404d-9579-53c8043d0875" />
+
+- Select the Token to request and click the Drip Button to dispense
+
+<img width="1440" height="900" alt="Screenshot 2025-10-30 at 1 45 20 PM" src="https://github.com/user-attachments/assets/b51002d7-f687-438b-ad45-a00fca408268" />
 
 ---
 
