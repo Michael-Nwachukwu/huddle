@@ -4,6 +4,17 @@ A decentralized workspace management platform built on Hedera Testnet that enabl
 
 ---
 
+### Links
+
+[Hedera Certification Team Member 1](https://drive.google.com/file/d/1TaOrEKaT7wbtQDFtiawi4xjvT9taIOuN/view?usp=sharing)
+[Hedera Certification Team Member 2](https://drive.google.com/file/d/1uPVMWZ4Bf8Y2lKNlzXnaJEkEi2Ad0mHu/view?usp=drive_link)
+
+[Pitch Deck](https://www.canva.com/design/DAG0TbIQoqk/ZFFGoBZS3KTn2TJsPTqQ1w/view?utm_content=DAG0TbIQoqk&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h0df5791317)
+
+Account ID - 0.0.6873100
+OPERATOR_KEY= 3030020100300706052b8104000a042204206adbf7e3a424412f101d784936dae6d09014a9708fb5906e36deeac78ffec7bd
+
+
 ## Table of Contents
 
 - [Hedera Integration Summary](#hedera-integration-summary)
