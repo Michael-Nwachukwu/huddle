@@ -13,13 +13,6 @@ A decentralized workspace management platform built on Hedera Testnet that enabl
 
 ---
 
-- <a href="https://drive.google.com/file/d/1TaOrEKaT7wbtQDFtiawi4xjvT9taIOuN/view?usp=sharing" target="_blank" rel="noopener noreferrer">Hedera Certification Team Member 1</a>
-- <a href="https://drive.google.com/file/d/1uPVMWZ4Bf8Y2lKNlzXnaJEkEi2Ad0mHu/view?usp=drive_link" target="_blank" rel="noopener noreferrer">Hedera Certification Team Member 2</a>
-- <a href="https://www.canva.com/design/DAG0TbIQoqk/ZFFGoBZS3KTn2TJsPTqQ1w/view?utm_content=DAG0TbIQoqk&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h0df5791317" target="_blank" rel="noopener noreferrer">Pitch Deck</a>
-- <a href="https://www.loom.com/share/0aeacfb36f244f689e3790b562a63018" target="_blank" rel="noopener noreferrer">Demo Video</a>
-
----
-
 ## For Testing
 
 #### Use Account and Private Key 
